@@ -106,61 +106,72 @@ namespace Pong
             if (kstate.IsKeyDown(Keys.A))
             {
                 player.position.X -= player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                player.direction = Direction.Left;
             }
 
             if (kstate.IsKeyDown(Keys.D))
             {
                 player.position.X += player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                player.direction = Direction.Right;
             }
 
             if (kstate.IsKeyDown(Keys.W))
             {
                 player.position.Y -= player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (kstate.IsKeyDown(Keys.A))
-                {
-                    player.direction = Direction.UpLeft;
-                }
-                else if (kstate.IsKeyDown(Keys.D))
-                {
-                    player.direction = Direction.UpRight;
-                }
-                else player.direction = Direction.Up;
             }
 
             if (kstate.IsKeyDown(Keys.S))
             {
                 player.position.Y += player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (kstate.IsKeyDown(Keys.A))
+            }
+            if (kstate.IsKeyDown(Keys.Left))
+            {
+                player.direction = Direction.Left;
+            }
+            if (kstate.IsKeyDown(Keys.Right))
+            {
+                player.direction = Direction.Right;
+            }
+            if (kstate.IsKeyDown(Keys.Up))
+            {
+                if (kstate.IsKeyDown(Keys.Left))
+                {
+                    player.direction = Direction.UpLeft;
+                }
+                else if (kstate.IsKeyDown(Keys.Right))
+                {
+                    player.direction = Direction.UpRight;
+                }
+                else player.direction = Direction.Up;
+            }
+            if (kstate.IsKeyDown(Keys.Down))
+            {
+                if (kstate.IsKeyDown(Keys.Left))
                 {
                     player.direction = Direction.DownLeft;
                 }
-                else if (kstate.IsKeyDown(Keys.D))
+                else if (kstate.IsKeyDown(Keys.Right))
                 {
                     player.direction = Direction.DownRight;
                 }
                 else player.direction = Direction.Down;
             }
 
-
             // Player Bound Managing
-            if (player.position.X < player.texture.Width / 2)
+            if (player.position.X < 15)
             {
-                player.position.X = player.texture.Width / 2;
+                player.position.X = 15;
             }
-            else if (player.position.X > _graphics.PreferredBackBufferWidth - player.texture.Width / 2)
+            else if (player.position.X > _graphics.PreferredBackBufferWidth - 15)
             {
-                player.position.X = _graphics.PreferredBackBufferWidth - player.texture.Width / 2;
+                player.position.X = _graphics.PreferredBackBufferWidth - 15;
             }
 
-            if (player.position.Y < player.texture.Width / 2)
+            if (player.position.Y < 15)
             {
-                player.position.Y = player.texture.Width / 2;
+                player.position.Y = 15;
             }
-            else if (player.position.Y > _graphics.PreferredBackBufferHeight - player.texture.Height / 2)
+            else if (player.position.Y > _graphics.PreferredBackBufferHeight -15)
             {
-                player.position.Y = _graphics.PreferredBackBufferHeight - player.texture.Height / 2;
+                player.position.Y = _graphics.PreferredBackBufferHeight - 15;
             }
 
 
@@ -170,8 +181,7 @@ namespace Pong
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-
-            
+ 
             _spriteBatch.Begin();
             // Player Sprite
             _spriteBatch.Draw(
