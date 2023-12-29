@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.PortableExecutable;
 
 namespace Pong
@@ -10,7 +12,8 @@ namespace Pong
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
-
+        private List<Character> bulletList;
+        private int bulletCoolDown = 20;
         Character player;
 
         public Game1()
@@ -45,14 +48,15 @@ namespace Pong
                 this.direction = direction;
             }
         }
+        
         protected override void Initialize()
         {
             _graphics.PreferredBackBufferWidth = 1080;
             _graphics.PreferredBackBufferHeight = 720;
             _graphics.ApplyChanges();
-            
+            bulletList = new List<Character>();
             Vector2 position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
-            float speed = 400f;
+            float speed = 300f;
             player = new Character(null, position, speed, Direction.Left);
             base.Initialize();
         }
@@ -93,6 +97,61 @@ namespace Pong
                     return (float)Math.PI / 4;
             }
             return 0f;
+        }
+        private void MakeBullet(Vector2 position, Direction direction)
+        {
+            float bullet_speed = 10f;
+            Texture2D whiteRect = new Texture2D(GraphicsDevice, 1, 1);
+            whiteRect.SetData(new[] { Color.White });
+            Character bullet = new Character(whiteRect, position, bullet_speed, direction);
+            bulletList.Add(bullet);
+        }
+        private void MoveBullets(List<Character> bulletList)
+        {
+            bulletList.RemoveAll(bullet =>
+                    (bullet.position.X > _graphics.PreferredBackBufferWidth) ||
+                    (bullet.position.X < 0) ||
+                    (bullet.position.Y > _graphics.PreferredBackBufferHeight) ||
+                    (bullet.position.Y < 0));
+            foreach (Character bullet in bulletList)
+            {
+                float dx = 0, dy = 0;
+                switch (bullet.direction)
+                {
+                    case Direction.Right:
+                        dx = bullet.velocity;
+                        break;
+                    case Direction.Left:
+                        dx = -1 * bullet.velocity;
+                        break;
+                    case Direction.Down:
+                        dy = -1 * bullet.velocity;
+                        break;
+                    case Direction.Up:
+                        dy = bullet.velocity;
+                        break;
+                    case Direction.UpLeft:
+                        dx = -1 * bullet.velocity;
+                        dy = bullet.velocity;
+                        break;
+                    case Direction.UpRight:
+                        dx = bullet.velocity;
+                        dy = bullet.velocity;
+                        break;
+                    case Direction.DownRight:
+                        dy = -1 * bullet.velocity;
+                        dx = bullet.velocity;
+                        break;
+                    case Direction.DownLeft:
+                        dy = -1 * bullet.velocity;
+                        dx = -1 * bullet.velocity;
+                        break;
+                }
+                float x = bullet.position.X + dx;
+                float y = bullet.position.Y - dy;
+                bullet.position = new Vector2(x, y);
+            } 
+           
         }
 
         protected override void Update(GameTime gameTime)
@@ -174,9 +233,20 @@ namespace Pong
                 player.position.Y = _graphics.PreferredBackBufferHeight - 15;
             }
 
+            // Bullet Time Management
+            if (bulletCoolDown == 0)
+            {
+                MakeBullet(player.position, player.direction);
+                bulletCoolDown = 50;
+            }
+            else bulletCoolDown--;
+            MoveBullets(bulletList);
+            
 
             base.Update(gameTime);
         }
+
+        
 
         protected override void Draw(GameTime gameTime)
         {
@@ -194,6 +264,20 @@ namespace Pong
                 new Vector2(0.15f, 0.15f),
                 SpriteEffects.None, 
                 0f);
+            foreach(Character bullet in bulletList)
+            {
+                _spriteBatch.Draw(
+                    bullet.texture,
+                    bullet.position,
+                    null,
+                    Color.White,
+                    0f,
+                    Vector2.Zero,
+                    new Vector2(5f, 5f),
+                    SpriteEffects.None,
+                    0f);
+            } 
+
             _spriteBatch.End();
 
             base.Draw(gameTime);
