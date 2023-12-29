@@ -13,6 +13,7 @@ namespace Pong
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private List<Character> bulletList;
+        private List<Character> enemyList;
         private int bulletCoolDown = 20;
         Character player;
 
@@ -39,13 +40,14 @@ namespace Pong
             public Vector2 position;
             public float velocity;
             public Direction direction;
-
-            public Character(Texture2D texture, Vector2 position, float velocity, Direction direction)
+            public int health;
+            public Character(Texture2D texture, Vector2 position, float velocity, Direction direction, int health)
             {
                 this.texture = texture;
                 this.position = position;
                 this.velocity = velocity;
                 this.direction = direction;
+                this.health = health;
             }
         }
         
@@ -55,9 +57,10 @@ namespace Pong
             _graphics.PreferredBackBufferHeight = 720;
             _graphics.ApplyChanges();
             bulletList = new List<Character>();
+            enemyList = new List<Character>();
             Vector2 position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
             float speed = 300f;
-            player = new Character(null, position, speed, Direction.Left);
+            player = new Character(null, position, speed, Direction.Left, 5);
             base.Initialize();
         }
 
@@ -103,8 +106,78 @@ namespace Pong
             float bullet_speed = 10f;
             Texture2D whiteRect = new Texture2D(GraphicsDevice, 1, 1);
             whiteRect.SetData(new[] { Color.White });
-            Character bullet = new Character(whiteRect, position, bullet_speed, direction);
+            Character bullet = new Character(whiteRect, position, bullet_speed, direction, 0);
             bulletList.Add(bullet);
+        }
+        private void MakeEnemy()
+        {
+            Random rnd = new Random();
+            int side = rnd.Next(1,4);
+            int randomX = rnd.Next(_graphics.PreferredBackBufferWidth);
+            int randomY = rnd.Next(_graphics.PreferredBackBufferHeight);
+            Texture2D redRect = new Texture2D(GraphicsDevice, 1, 1);
+            redRect.SetData(new[] { Color.Red });
+            Vector2 position = new Vector2(0,0);
+            float enemy_speed = 1.5f;
+            switch (side)
+            {
+                case 1:
+                    position.X = -100;
+                    position.Y = randomY;
+                    break;
+                case 2:
+                    position.X = randomX;
+                    position.Y = -100;
+                    break;
+                case 3:
+                    position.X = _graphics.PreferredBackBufferWidth + 100;
+                    position.Y = randomY;
+                    break;
+                case 4:
+                    position.X = randomX;
+                    position.Y = _graphics.PreferredBackBufferHeight + 100;
+                    break;
+            }
+            enemyList.Add(new Character(redRect, position, enemy_speed, Direction.Up, 1));
+        }
+        private void MoveEnemies(List<Character> enemies)
+        {
+            enemies.RemoveAll(enemy => enemy.health <= 0);
+            foreach (Character enemy in enemies)
+            {
+                float distY = player.position.Y - enemy.position.Y;
+                float distX = player.position.X - enemy.position.X;
+                float theta;
+                
+                if (distY > -5 && distY < 5)
+                {
+                    if (player.position.X < enemy.position.X) theta = (float)Math.PI * 3;
+                    else theta = (float)Math.PI * 2;
+                }
+                
+                else if (distX > -5 && distX < 5)
+                {
+                    if (player.position.Y < enemy.position.Y) theta = (float)Math.PI * 3 / 2;
+                    else theta = (float)(Math.PI * 5 / 2);
+                }
+                
+                else
+                {
+                    theta = (float)(Math.Atan(distY / distX) + (2 * Math.PI));
+                    
+                    if (player.position.X < enemy.position.X)
+                    {
+                        if (player.position.Y < enemy.position.Y) theta -= (float)Math.PI; 
+                        else theta += (float)Math.PI;
+                    }
+                }
+
+                float da = enemy.velocity * (float)Math.Cos(theta);
+                float db = enemy.velocity * (float)Math.Sin(theta);
+                
+                enemy.position.X += da;
+                enemy.position.Y += db;
+            }
         }
         private void MoveBullets(List<Character> bulletList)
         {
