@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection.PortableExecutable;
 
@@ -12,10 +13,11 @@ namespace Pong
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
+        private Texture2D _backgroundTexture;
         private List<Character> bulletList;
         private List<Character> enemyList;
         private int bulletTimer = 0;
-        private int _bulletCD = 50;
+        private int _bulletCD = 35;
         Character player;
 
         public Game1()
@@ -91,29 +93,7 @@ namespace Pong
             }
         }
         
-        protected override void Initialize()
-        {
-            _graphics.PreferredBackBufferWidth = 1080;
-            _graphics.PreferredBackBufferHeight = 720;
-            _graphics.ApplyChanges();
-            bulletList = new List<Character>();
-            enemyList = new List<Character>();
-            Vector2 position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
-            float speed = 300f;
-            player = new Character(null, position, speed, Direction.Left, 5);
-            
-            for (int i = 0; i < 10; i++) MakeEnemy();
-            
-            base.Initialize();
-        }
 
-        protected override void LoadContent()
-        {
-            _spriteBatch = new SpriteBatch(GraphicsDevice);
-
-            // TODO: use this.Content to load your game content here
-            player.texture = Content.Load<Texture2D>("player");
-        }
         private float GetAngleFromDirection(Direction direction) 
         {
             switch (direction)
@@ -161,7 +141,7 @@ namespace Pong
             Texture2D redRect = new Texture2D(GraphicsDevice, 1, 1);
             redRect.SetData(new[] { Color.Red });
             Vector2 position = new Vector2(0,0);
-            float enemy_speed = 0.5f;
+            float enemy_speed = 1.0f;
             switch (side)
             {
                 case 1:
@@ -287,7 +267,29 @@ namespace Pong
                     (bullet.position.Y < 0));
             bulletList.RemoveAll(bullet => bullet.health <= 0);
         }
+        protected override void Initialize()
+        {
+            _graphics.PreferredBackBufferWidth = 1080;
+            _graphics.PreferredBackBufferHeight = 720;
+            _graphics.ApplyChanges();
+            bulletList = new List<Character>();
+            enemyList = new List<Character>();
+            Vector2 position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
+            float speed = 300f;
+            player = new Character(null, position, speed, Direction.Left, 5);
 
+            for (int i = 0; i < 10; i++) MakeEnemy();
+
+            base.Initialize();
+        }
+        protected override void LoadContent()
+        {
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
+
+            // TODO: use this.Content to load your game content here
+            player.texture = Content.Load<Texture2D>("player");
+            _backgroundTexture = Content.Load<Texture2D>("background1");
+        }
         protected override void Update(GameTime gameTime)
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
@@ -347,8 +349,19 @@ namespace Pong
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
- 
+            
             _spriteBatch.Begin();
+            _spriteBatch.Draw(
+                _backgroundTexture,
+                new Vector2(0,0),
+                null,
+                Color.White,
+                0,
+                new Vector2(player.texture.Width / 2, player.texture.Height / 2),
+                new Vector2(0.35f, 0.35f),
+                SpriteEffects.None,
+                0f
+                );
             // Player Sprite
             _spriteBatch.Draw(
                 player.texture, 
@@ -360,6 +373,7 @@ namespace Pong
                 new Vector2(0.15f, 0.15f),
                 SpriteEffects.None, 
                 0f);
+            // Bullets
             foreach(Character bullet in bulletList)
             {
                 _spriteBatch.Draw(
@@ -373,6 +387,7 @@ namespace Pong
                     SpriteEffects.None,
                     0f);
             }
+            // Enemies
             foreach(Character enemy in enemyList)
             {
                 _spriteBatch.Draw(
