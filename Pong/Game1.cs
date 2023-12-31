@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection.PortableExecutable;
@@ -13,11 +14,18 @@ namespace Pong
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
+        private SpriteFont _font;
         private Texture2D _backgroundTexture;
+        private int _bulletCD = 35;
+
         private List<Character> bulletList;
         private List<Character> enemyList;
         private int bulletTimer = 0;
-        private int _bulletCD = 35;
+        
+        private float currentTime = 0f;
+        private int counter = 0;
+        private float countDuration = 1f;
+        
         Character player;
 
         public Game1()
@@ -44,19 +52,21 @@ namespace Pong
             public float velocity;
             public Direction direction;
             public int health;
-            public Character(Texture2D texture, Vector2 position, float velocity, Direction direction, int health)
+            public float angle;
+            public Character(Texture2D texture, Vector2 position, float velocity, Direction direction, int health, float angle = 0)
             {
                 this.texture = texture;
                 this.position = position;
                 this.velocity = velocity;
                 this.direction = direction;
                 this.health = health;
+                this.angle = angle;
             }
             
-            public float left()  {return position.X - (texture.Width / 2);}
-            public float right() { return position.X + (texture.Width / 2);}
-            public float top() { return position.Y - (texture.Height / 2);}
-            public float bottom() { return position.Y + (texture.Height / 2);}
+            public float left()  {return position.X - (25 / 2);}
+            public float right() { return position.X + (25 / 2);}
+            public float top() { return position.Y - (25 / 2);}
+            public float bottom() { return position.Y + (25 / 2);}
             public bool Touches(Character other)
             {
                 // FROM GAMEBOX
@@ -64,7 +74,7 @@ namespace Pong
                 float r = left() - other.right();
                 float t = other.top() - bottom();
                 float b = top() - other.bottom();
-                return Enumerable.Max(new [] {l,b,r,t}) <= 0;
+                return Math.Max(Math.Max(l,r), Math.Max(t,b)) <= 0;
             }
             public float[] Overlap(Character other)
             {
@@ -73,7 +83,7 @@ namespace Pong
                 float r = left() - other.right();
                 float t = other.top() - bottom();
                 float b = top() - other.bottom();
-                float m = Enumerable.Max(new[] { l, b, r, t });
+                float m = Math.Max(Math.Max(l, r), Math.Max(t, b));
                 if (m >= 0) { return new float[] {0,0}; } 
                 else if (m == l) { return new float[] { l, 0 }; }
                 else if (m == r) { return new float[] { -1 * r, 0 }; }
@@ -85,10 +95,11 @@ namespace Pong
                 float[] o = Overlap(other);
                 if (o[0] != 0 && o[1] != 0) // o != [0,0]
                 {
-                    position.X = o[0]/2;
-                    position.Y = o[1]/2;
-                    other.position.X = -1 * o[0]/2;
-                    other.position.Y = -1 * o[1]/2;
+                    position.X = o[0] / 2;
+                    position.Y = o[1] / 2 + 25;
+                    other.position.X = -1 * o[0] / 2 - 25;
+                    other.position.Y = -1 * o[1] / 2 - 25;
+
                 }
             }
         }
@@ -141,7 +152,7 @@ namespace Pong
             Texture2D redRect = new Texture2D(GraphicsDevice, 1, 1);
             redRect.SetData(new[] { Color.Red });
             Vector2 position = new Vector2(0,0);
-            float enemy_speed = 1.0f;
+            float enemy_speed = 1.7f;
             switch (side)
             {
                 case 1:
@@ -192,7 +203,7 @@ namespace Pong
                         else theta += (float)Math.PI;
                     }
                 }
-
+                enemy.angle = theta;
                 float da = enemy.velocity * (float)Math.Cos(theta);
                 float db = enemy.velocity * (float)Math.Sin(theta);
                 
@@ -200,7 +211,10 @@ namespace Pong
                 enemy.position.Y += db;
                 foreach (Character otherEnemy in enemies)
                 {
-                    if (otherEnemy.Touches(enemy)) { enemy.moveBothToStopOverlap(otherEnemy); } 
+                    if (otherEnemy != enemy && otherEnemy.Touches(enemy)) 
+                    {
+                        enemy.moveBothToStopOverlap(otherEnemy); 
+                    } 
                 }
             }
         }
@@ -278,7 +292,7 @@ namespace Pong
             float speed = 300f;
             player = new Character(null, position, speed, Direction.Left, 5);
 
-            for (int i = 0; i < 10; i++) MakeEnemy();
+            for (int i = 0; i < 2; i++) MakeEnemy();
 
             base.Initialize();
         }
@@ -289,13 +303,23 @@ namespace Pong
             // TODO: use this.Content to load your game content here
             player.texture = Content.Load<Texture2D>("player");
             _backgroundTexture = Content.Load<Texture2D>("background1");
+            _font = Content.Load<SpriteFont>("Arial");
         }
         protected override void Update(GameTime gameTime)
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
+            currentTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (currentTime >= countDuration)
+            {
+                counter++;
+                currentTime -= countDuration;
+            }
+            // Debug.WriteLine(counter.ToString());
+
             var kstate = Keyboard.GetState();
+
 
             // Event Readers
             if (kstate.IsKeyDown(Keys.A)) player.position.X -= player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -362,6 +386,9 @@ namespace Pong
                 SpriteEffects.None,
                 0f
                 );
+            // mSprite.DrawString(mFont, "YourText", new Vector2(graphicsDevice.Viewport.Width / 2 - mFont.MeasureString("YourText").Length() / 2, 0), Color.White, 0, new Vector2(0, 0), 1f, SpriteEffects.None, 0f);
+            _spriteBatch.DrawString(_font, counter.ToString(), 
+                new Vector2(_graphics.PreferredBackBufferWidth / 2 - _font.MeasureString(counter.ToString()).Length() / 2, 10), Color.White);
             // Player Sprite
             _spriteBatch.Draw(
                 player.texture, 
@@ -395,7 +422,7 @@ namespace Pong
                     enemy.position,
                     null,
                     Color.Red,
-                    0f,
+                    enemy.angle,
                     Vector2.Zero,
                     new Vector2(25f, 25f),
                     SpriteEffects.None,
