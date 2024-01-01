@@ -25,7 +25,10 @@ namespace Pong
         private float currentTime = 0f;
         private int counter = 0;
         private float countDuration = 1f;
-        
+        private int levelNumber = 1;
+
+        private int enemyKills = 0;
+
         Character player;
 
         public Game1()
@@ -146,7 +149,7 @@ namespace Pong
         private void MakeEnemy()
         {
             Random rnd = new Random();
-            int side = rnd.Next(1,4);
+            int side = rnd.Next(1,5);
             int randomX = rnd.Next(_graphics.PreferredBackBufferWidth);
             int randomY = rnd.Next(_graphics.PreferredBackBufferHeight);
             Texture2D redRect = new Texture2D(GraphicsDevice, 1, 1);
@@ -174,8 +177,13 @@ namespace Pong
             }
             enemyList.Add(new Character(redRect, position, enemy_speed, Direction.Up, 1));
         }
-        private void MoveEnemies(List<Character> enemies)
+        private void MakeWave(int number)
         {
+            for (int i = 0; i < number; i++) { MakeEnemy(); }
+        }
+        private void UpdateEnemies(List<Character> enemies)
+        {
+            enemies.ForEach(e => { if (e.health <= 0) enemyKills++; });
             enemies.RemoveAll(enemy => enemy.health <= 0);
             foreach (Character enemy in enemies)
             {
@@ -281,6 +289,19 @@ namespace Pong
                     (bullet.position.Y < 0));
             bulletList.RemoveAll(bullet => bullet.health <= 0);
         }
+
+        private void makeLevelStage(int levelNumber)
+        {
+            if (levelNumber < 3)
+            {
+                MakeWave(3);
+            }
+            else if (levelNumber < 6)
+            {
+                MakeWave(6);
+            }
+            else { MakeWave(10); }
+        }
         protected override void Initialize()
         {
             _graphics.PreferredBackBufferWidth = 1080;
@@ -289,10 +310,10 @@ namespace Pong
             bulletList = new List<Character>();
             enemyList = new List<Character>();
             Vector2 position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
-            float speed = 300f;
+            float speed = 200f;
             player = new Character(null, position, speed, Direction.Left, 5);
-
-            for (int i = 0; i < 2; i++) MakeEnemy();
+            MakeWave(2);
+            
 
             base.Initialize();
         }
@@ -315,7 +336,14 @@ namespace Pong
             {
                 counter++;
                 currentTime -= countDuration;
+                if (counter % 10 == 0)
+                {
+                    makeLevelStage(levelNumber);
+                    levelNumber++;
+                }
             }
+            
+            
             // Debug.WriteLine(counter.ToString());
 
             var kstate = Keyboard.GetState();
@@ -365,7 +393,7 @@ namespace Pong
             else bulletTimer--;
             MoveBullets(bulletList);
 
-            MoveEnemies(enemyList);
+            UpdateEnemies(enemyList);
             // DON'T DELETE
             base.Update(gameTime);
         }
@@ -386,9 +414,13 @@ namespace Pong
                 SpriteEffects.None,
                 0f
                 );
-            // mSprite.DrawString(mFont, "YourText", new Vector2(graphicsDevice.Viewport.Width / 2 - mFont.MeasureString("YourText").Length() / 2, 0), Color.White, 0, new Vector2(0, 0), 1f, SpriteEffects.None, 0f);
+            
             _spriteBatch.DrawString(_font, counter.ToString(), 
                 new Vector2(_graphics.PreferredBackBufferWidth / 2 - _font.MeasureString(counter.ToString()).Length() / 2, 10), Color.White);
+            _spriteBatch.DrawString(_font, enemyKills.ToString(),
+                new Vector2(20, 10), Color.White);
+            _spriteBatch.DrawString(_font, player.health.ToString(),
+                new Vector2(_graphics.PreferredBackBufferWidth - 40 , 10), Color.DarkRed);
             // Player Sprite
             _spriteBatch.Draw(
                 player.texture, 
