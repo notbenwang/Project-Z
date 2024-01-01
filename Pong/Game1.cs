@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection.PortableExecutable;
+using System.Runtime.CompilerServices;
 
 namespace Pong
 {
@@ -20,7 +21,10 @@ namespace Pong
 
         private List<Character> bulletList;
         private List<Character> enemyList;
+        private List<PowerUp> powerUpTextures;
+        private List<PowerUp> playerPowerUps;
         private int bulletTimer = 0;
+
         
         private float currentTime = 0f;
         private int counter = 0;
@@ -29,6 +33,7 @@ namespace Pong
 
         private int enemyKills = 0;
 
+        PowerUp rapidFire;
         Character player;
 
         public Game1()
@@ -106,7 +111,52 @@ namespace Pong
                 }
             }
         }
-        
+        class PowerUp
+        {
+            public bool status;
+            public bool active;
+            public int duration;
+            public int startTime;
+            public Texture2D texture;
+            public Vector2 position;
+            private GraphicsDeviceManager graphics;
+            public PowerUp(Texture2D texture, int duration, GraphicsDeviceManager graphics) {
+                this.texture = texture;
+                this.duration = duration;
+                this.graphics = graphics;
+            }
+            public void Initiate()
+            {
+                if (!status)
+                {
+                    status = true;
+                    active = false;
+                    Random rnd = new Random();
+                    int randomX = rnd.Next(graphics.PreferredBackBufferWidth);
+                    int randomY = rnd.Next(graphics.PreferredBackBufferHeight);
+                    position = new Vector2(randomX, randomY);
+                }
+            }
+            public float left() { return position.X - (25 / 2); }
+            public float right() { return position.X + (25 / 2); }
+            public float top() { return position.Y - (25 / 2); }
+            public float bottom() { return position.Y + (25 / 2); }
+            public bool Touches(Character other)
+            {
+                // FROM GAMEBOX
+                float l = other.left() - right();
+                float r = left() - other.right();
+                float t = other.top() - bottom();
+                float b = top() - other.bottom();
+                return Math.Max(Math.Max(l, r), Math.Max(t, b)) <= 0;
+            }
+            public bool IsActive(int currentTime)
+            {
+                if (active) { active = (currentTime <= duration + startTime);}
+                return active;
+            }
+        }
+
 
         private float GetAngleFromDirection(Direction direction) 
         {
@@ -177,6 +227,7 @@ namespace Pong
             }
             enemyList.Add(new Character(redRect, position, enemy_speed, Direction.Up, 1));
         }
+
         private void MakeWave(int number)
         {
             for (int i = 0; i < number; i++) { MakeEnemy(); }
@@ -224,9 +275,14 @@ namespace Pong
                         enemy.moveBothToStopOverlap(otherEnemy); 
                     } 
                 }
+                if (enemy.Touches(player))
+                {
+                    enemy.health = 0;
+                    player.health--;
+                }
             }
         }
-        private void MoveBullets(List<Character> bulletList)
+        private void UpdateBullets(List<Character> bulletList)
         {
             foreach (Character bullet in bulletList)
             {
@@ -312,6 +368,13 @@ namespace Pong
             Vector2 position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
             float speed = 200f;
             player = new Character(null, position, speed, Direction.Left, 5);
+
+            Texture2D blueRect = new Texture2D(GraphicsDevice, 1, 1);
+            blueRect.SetData(new[] { Color.Blue });
+
+            rapidFire = new PowerUp(blueRect, 10, _graphics);
+            playerPowerUps = new List<PowerUp>();
+            powerUpTextures = new List<PowerUp>();
             MakeWave(2);
             
 
@@ -342,9 +405,25 @@ namespace Pong
                     levelNumber++;
                 }
             }
-            
-            
-            // Debug.WriteLine(counter.ToString());
+            if (counter % 25 == 0)
+            {
+                rapidFire.Initiate();
+                powerUpTextures.Add(rapidFire);
+            }
+            foreach (var powerUp in powerUpTextures) {
+                if (powerUp.Touches(player))
+                {
+                    powerUp.active = true;
+                    powerUp.status = false;
+                    powerUp.startTime = counter;
+                    playerPowerUps.Add(powerUp);
+                }
+            }
+            foreach (var powerUp in playerPowerUps) { 
+                powerUp.IsActive(counter); 
+            }
+            powerUpTextures.RemoveAll(p => !p.status);
+            playerPowerUps.RemoveAll(p => !p.active);
 
             var kstate = Keyboard.GetState();
 
@@ -388,10 +467,10 @@ namespace Pong
             if (bulletTimer == 0)
             {
                 MakeBullet(player.position, player.direction);
-                bulletTimer = _bulletCD;
+                bulletTimer = (rapidFire.active) ? _bulletCD / 5 : _bulletCD;
             }
             else bulletTimer--;
-            MoveBullets(bulletList);
+            UpdateBullets(bulletList);
 
             UpdateEnemies(enemyList);
             // DON'T DELETE
@@ -459,6 +538,23 @@ namespace Pong
                     new Vector2(25f, 25f),
                     SpriteEffects.None,
                     0f);
+            }// PowerUps
+            foreach(PowerUp powerUp in powerUpTextures)
+            {
+                if (powerUp.status)
+                {
+                    _spriteBatch.Draw(
+                    powerUp.texture,
+                    powerUp.position,
+                    null,
+                    Color.Blue,
+                    0,
+                    Vector2.Zero,
+                    new Vector2(25f, 25f),
+                    SpriteEffects.None,
+                    0f);
+                }
+                
             }
 
             _spriteBatch.End();
