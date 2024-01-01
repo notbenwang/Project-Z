@@ -21,7 +21,7 @@ namespace Pong
 
         private List<Character> bulletList;
         private List<Character> enemyList;
-        private List<PowerUp> powerUpTextures;
+        private List<Character> powerUpTextures;
         private List<PowerUp> playerPowerUps;
         private int bulletTimer = 0;
 
@@ -113,42 +113,19 @@ namespace Pong
         }
         class PowerUp
         {
-            public bool status;
             public bool active;
             public int duration;
             public int startTime;
-            public Texture2D texture;
-            public Vector2 position;
-            private GraphicsDeviceManager graphics;
-            public PowerUp(Texture2D texture, int duration, GraphicsDeviceManager graphics) {
-                this.texture = texture;
+            public PowerUp(int duration) {
                 this.duration = duration;
-                this.graphics = graphics;
             }
-            public void Initiate()
+            public void Initiate(int startTime)
             {
-                if (!status)
+                if (!active)
                 {
-                    status = true;
-                    active = false;
-                    Random rnd = new Random();
-                    int randomX = rnd.Next(graphics.PreferredBackBufferWidth);
-                    int randomY = rnd.Next(graphics.PreferredBackBufferHeight);
-                    position = new Vector2(randomX, randomY);
+                    this.startTime = startTime;
+                    active = true;
                 }
-            }
-            public float left() { return position.X - (25 / 2); }
-            public float right() { return position.X + (25 / 2); }
-            public float top() { return position.Y - (25 / 2); }
-            public float bottom() { return position.Y + (25 / 2); }
-            public bool Touches(Character other)
-            {
-                // FROM GAMEBOX
-                float l = other.left() - right();
-                float r = left() - other.right();
-                float t = other.top() - bottom();
-                float b = top() - other.bottom();
-                return Math.Max(Math.Max(l, r), Math.Max(t, b)) <= 0;
             }
             public bool IsActive(int currentTime)
             {
@@ -188,7 +165,7 @@ namespace Pong
             }
             return 0f;
         }
-        private void MakeBullet(Vector2 position, Direction direction)
+        private void SpawnBullet(Vector2 position, Direction direction)
         {
             float bullet_speed = 10f;
             Texture2D whiteRect = new Texture2D(GraphicsDevice, 1, 1);
@@ -196,7 +173,7 @@ namespace Pong
             Character bullet = new Character(whiteRect, position, bullet_speed, direction, 1);
             bulletList.Add(bullet);
         }
-        private void MakeEnemy()
+        private void SpawnEnemy()
         {
             Random rnd = new Random();
             int side = rnd.Next(1,5);
@@ -228,9 +205,46 @@ namespace Pong
             enemyList.Add(new Character(redRect, position, enemy_speed, Direction.Up, 1));
         }
 
-        private void MakeWave(int number)
+        private void SpawnPowerUpSprite()
         {
-            for (int i = 0; i < number; i++) { MakeEnemy(); }
+            Texture2D blueRect = new Texture2D(GraphicsDevice, 1, 1);
+            blueRect.SetData(new[] { Color.Blue });
+            Random rnd = new Random();
+            int randomX = rnd.Next(_graphics.PreferredBackBufferWidth);
+            int randomY = rnd.Next(_graphics.PreferredBackBufferHeight);
+            powerUpTextures.Add(new Character(blueRect, new Vector2(randomX,randomY), 0, Direction.Up, 1)); 
+        }
+        private void UpdatePowerUpSprites()
+        {
+            foreach (Character p in powerUpTextures) 
+            {
+                if (p.Touches(player))
+                {
+                    ActivateRandomPowerUp();
+                    p.health = 0;
+                }
+            }
+            powerUpTextures.RemoveAll(p => p.health <= 0);
+        }
+        private void ActivateRandomPowerUp()
+        {
+            Random rnd = new Random();
+            int value = rnd.Next(100);
+            if (value < 100) // 100% chance to activate RAPIDFIRE
+            {
+                if (rapidFire.active){ rapidFire.startTime = counter;}
+                else
+                {
+                    rapidFire.Initiate(counter);
+                    playerPowerUps.Add(rapidFire);
+                }
+                
+            }
+        }
+
+        private void SpawnWave(int number)
+        {
+            for (int i = 0; i < number; i++) { SpawnEnemy(); }
         }
         private void UpdateEnemies(List<Character> enemies)
         {
@@ -350,13 +364,13 @@ namespace Pong
         {
             if (levelNumber < 3)
             {
-                MakeWave(3);
+                SpawnWave(3);
             }
             else if (levelNumber < 6)
             {
-                MakeWave(6);
+                SpawnWave(6);
             }
-            else { MakeWave(10); }
+            else { SpawnWave(10); }
         }
         protected override void Initialize()
         {
@@ -369,13 +383,11 @@ namespace Pong
             float speed = 200f;
             player = new Character(null, position, speed, Direction.Left, 5);
 
-            Texture2D blueRect = new Texture2D(GraphicsDevice, 1, 1);
-            blueRect.SetData(new[] { Color.Blue });
 
-            rapidFire = new PowerUp(blueRect, 10, _graphics);
+            rapidFire = new PowerUp(10);
             playerPowerUps = new List<PowerUp>();
-            powerUpTextures = new List<PowerUp>();
-            MakeWave(2);
+            powerUpTextures = new List<Character>();
+            SpawnWave(2);
             
 
             base.Initialize();
@@ -394,41 +406,23 @@ namespace Pong
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
+            // Update Timer
             currentTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (currentTime >= countDuration)
             {
                 counter++;
                 currentTime -= countDuration;
+                // Depending on the Time...
                 if (counter % 10 == 0)
                 {
                     makeLevelStage(levelNumber);
                     levelNumber++;
                 }
+                if (counter % 25 == 0) { SpawnPowerUpSprite(); }
             }
-            if (counter % 25 == 0)
-            {
-                rapidFire.Initiate();
-                powerUpTextures.Add(rapidFire);
-            }
-            foreach (var powerUp in powerUpTextures) {
-                if (powerUp.Touches(player))
-                {
-                    powerUp.active = true;
-                    powerUp.status = false;
-                    powerUp.startTime = counter;
-                    playerPowerUps.Add(powerUp);
-                }
-            }
-            foreach (var powerUp in playerPowerUps) { 
-                powerUp.IsActive(counter); 
-            }
-            powerUpTextures.RemoveAll(p => !p.status);
-            playerPowerUps.RemoveAll(p => !p.active);
-
-            var kstate = Keyboard.GetState();
-
 
             // Event Readers
+            var kstate = Keyboard.GetState();
             if (kstate.IsKeyDown(Keys.A)) player.position.X -= player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (kstate.IsKeyDown(Keys.D)) player.position.X += player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (kstate.IsKeyDown(Keys.W)) player.position.Y -= player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -462,17 +456,21 @@ namespace Pong
             {
                 player.position.Y = _graphics.PreferredBackBufferHeight - 15;
             }
-
             // Bullet Time Management
             if (bulletTimer == 0)
             {
-                MakeBullet(player.position, player.direction);
+                SpawnBullet(player.position, player.direction);
                 bulletTimer = (rapidFire.active) ? _bulletCD / 5 : _bulletCD;
             }
             else bulletTimer--;
-            UpdateBullets(bulletList);
 
+            // Updaters
+            UpdateBullets(bulletList);
             UpdateEnemies(enemyList);
+            UpdatePowerUpSprites();
+            foreach (var powerUp in playerPowerUps) { powerUp.IsActive(counter);}
+            playerPowerUps.RemoveAll(p => !p.active);
+            
             // DON'T DELETE
             base.Update(gameTime);
         }
@@ -482,6 +480,7 @@ namespace Pong
             GraphicsDevice.Clear(Color.CornflowerBlue);
             
             _spriteBatch.Begin();
+            // Background
             _spriteBatch.Draw(
                 _backgroundTexture,
                 new Vector2(0,0),
@@ -493,11 +492,13 @@ namespace Pong
                 SpriteEffects.None,
                 0f
                 );
-            
+            // Timer
             _spriteBatch.DrawString(_font, counter.ToString(), 
                 new Vector2(_graphics.PreferredBackBufferWidth / 2 - _font.MeasureString(counter.ToString()).Length() / 2, 10), Color.White);
+            // Enemy Kill Count
             _spriteBatch.DrawString(_font, enemyKills.ToString(),
                 new Vector2(20, 10), Color.White);
+            // Health Count
             _spriteBatch.DrawString(_font, player.health.ToString(),
                 new Vector2(_graphics.PreferredBackBufferWidth - 40 , 10), Color.DarkRed);
             // Player Sprite
@@ -539,26 +540,22 @@ namespace Pong
                     SpriteEffects.None,
                     0f);
             }// PowerUps
-            foreach(PowerUp powerUp in powerUpTextures)
+            foreach(Character powerUp in powerUpTextures)
             {
-                if (powerUp.status)
-                {
-                    _spriteBatch.Draw(
-                    powerUp.texture,
-                    powerUp.position,
-                    null,
-                    Color.Blue,
-                    0,
-                    Vector2.Zero,
-                    new Vector2(25f, 25f),
-                    SpriteEffects.None,
-                    0f);
-                }
-                
+                _spriteBatch.Draw(
+                powerUp.texture,
+                powerUp.position,
+                null,
+                Color.Blue,
+                0,
+                Vector2.Zero,
+                new Vector2(25f, 25f),
+                SpriteEffects.None,
+                0f);   
             }
 
+            // DONT DELETE
             _spriteBatch.End();
-
             base.Draw(gameTime);
         }
     }
