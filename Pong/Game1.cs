@@ -38,7 +38,8 @@ namespace Pong
             public Direction direction;
             public int health;
             public float angle;
-            public Character(Texture2D texture, Vector2 position, float velocity, Direction direction, int health, float angle = 0)
+            public float size;
+            public Character(Texture2D texture, Vector2 position, float velocity, Direction direction, int health, float angle = 0, float size=25)
             {
                 this.texture = texture;
                 this.position = position;
@@ -46,7 +47,15 @@ namespace Pong
                 this.direction = direction;
                 this.health = health;
                 this.angle = angle;
+                this.size = size;
             }
+            //public float SetAngle(float angle)
+            //{
+            //    if (Math.Abs(angle - this.angle) > 0)
+            //    {
+
+            //    }
+            //}
 
             public float left() { return position.X - (25 / 2); }
             public float right() { return position.X + (25 / 2); }
@@ -93,9 +102,11 @@ namespace Pong
             public bool active;
             public int duration;
             public int startTime;
-            public PowerUp(int duration)
+            public String name;
+            public PowerUp(int duration, string name)
             {
                 this.duration = duration;
+                this.name = name;
             }
             public void Initiate(int startTime)
             {
@@ -123,9 +134,8 @@ namespace Pong
         private List<Character> powerUpTextures;
         private List<PowerUp> playerPowerUps;
         private List<Character> heartList;
-        private int bulletTimer = 0;
 
-        
+        private int bulletTimer = 0;
         private float currentTime = 0f;
         private int counter = 0;
         private float countDuration = 1f;
@@ -133,9 +143,10 @@ namespace Pong
 
         private int enemyKills = 0;
 
-        PowerUp rapidFire = new PowerUp(10);
-        PowerUp strikeThrough = new PowerUp(25);
-        PowerUp tripleShot = new PowerUp(25);
+        PowerUp rapidFire = new PowerUp(30, "Rapidfire");
+        PowerUp piercingBullets = new PowerUp(30, "Harpoon Bullets");
+        PowerUp tripleShot = new PowerUp(30, "Triple Shot");
+        PowerUp collateralShot = new PowerUp(30, "Exploding Bullets");
         Character player;
 
         private float GetAngleFromDirection(Direction direction) 
@@ -233,7 +244,7 @@ namespace Pong
             float bullet_speed = 10f;
             Texture2D whiteRect = new Texture2D(GraphicsDevice, 1, 1);
             whiteRect.SetData(new[] { Color.White });
-            int health = (strikeThrough.active) ? 1000 : 1;
+            int health = (piercingBullets.active) ? 25 : 1;
             Character bullet = new Character(whiteRect, position, bullet_speed, direction, health);
             bulletList.Add(bullet);
             
@@ -243,37 +254,34 @@ namespace Pong
                 bulletList.Add(new Character(whiteRect, position, bullet_speed, GetLeftDirection(direction), health));
             }
         }
-        private void SpawnEnemy()
+        private Texture2D CreateRect(int width, int height, Color color)
         {
-            Random rnd = new Random();
-            int side = rnd.Next(1,5);
-            int randomX = rnd.Next(_graphics.PreferredBackBufferWidth);
-            int randomY = rnd.Next(_graphics.PreferredBackBufferHeight);
-            Texture2D redRect = new Texture2D(GraphicsDevice, 1, 1);
-            redRect.SetData(new[] { Color.Red });
-            Vector2 position = new Vector2(0,0);
-            float enemy_speed = 1.7f;
-            switch (side)
-            {
-                case 1:
-                    position.X = -100;
-                    position.Y = randomY;
-                    break;
-                case 2:
-                    position.X = randomX;
-                    position.Y = -100;
-                    break;
-                case 3:
-                    position.X = _graphics.PreferredBackBufferWidth + 100;
-                    position.Y = randomY;
-                    break;
-                case 4:
-                    position.X = randomX;
-                    position.Y = _graphics.PreferredBackBufferHeight + 100;
-                    break;
-            }
-            enemyList.Add(new Character(redRect, position, enemy_speed, Direction.Up, 1));
+            Texture2D rect = new Texture2D(GraphicsDevice, width, height);
+            Color[] data = new Color[width * height];
+            for (int i = 0; i < data.Length; i++) { data[i] = color; }
+            rect.SetData(data);
+            return rect;
         }
+        private void SpawnNormalEnemy(Vector2 position)
+        {
+            Texture2D rect = CreateRect(25, 25, Color.Red);
+            float enemy_speed = 1.7f;   
+            enemyList.Add(new Character(rect, position, enemy_speed, Direction.Up, 1));
+
+        }
+        private void SpawnBigEnemy(Vector2 position)
+        {
+            Texture2D orangeRect = CreateRect(50, 50, Color.Orange);
+            float enemy_speed = 1f;
+            enemyList.Add(new Character(orangeRect, position, enemy_speed, Direction.Up, 5, 0, 50));
+        }
+        private void SpawnReallyBigEnemy(Vector2 position)
+        {
+            Texture2D rect = CreateRect(100, 100, Color.Yellow);
+            float enemy_speed = 0.3f;
+            enemyList.Add(new Character(rect, position, enemy_speed, Direction.Up, 20, 0, 100));
+        }
+
 
         private void SpawnPowerUpSprite()
         {
@@ -301,14 +309,14 @@ namespace Pong
             Random rnd = new Random();
             int value = rnd.Next(100);
             
-            if (value < 33) { ActivateSpecificPowerUp(rapidFire); }
-            else if (value < 66) { ActivateSpecificPowerUp(strikeThrough); }
-            else if (value < 100) { ActivateSpecificPowerUp(tripleShot); }
+            if (value < 25) { ActivateSpecificPowerUp(rapidFire); }
+            else if (value < 50) { ActivateSpecificPowerUp(piercingBullets); }
+            else if (value < 75) { ActivateSpecificPowerUp(tripleShot); }
+            else if (value < 100) { ActivateSpecificPowerUp(collateralShot); }
         }
         private void SpawnHeartAtPosition(Vector2 position)
         {
-            Texture2D redRect = new Texture2D(GraphicsDevice, 1, 1);
-            redRect.SetData(new[] { Color.Orange });
+            Texture2D redRect = CreateRect(10, 10, Color.DarkRed);
             heartList.Add(new Character(redRect, position, 0, Direction.Up, 1));
         }
         private void UpdateHearts()
@@ -331,10 +339,41 @@ namespace Pong
                 playerPowerUps.Add(p);
             }
         }
-
+        private Vector2 getRandomOutsidePosition()
+        {
+            Random rnd = new Random();
+            int side = rnd.Next(1, 5);
+            int randomX = rnd.Next(_graphics.PreferredBackBufferWidth);
+            int randomY = rnd.Next(_graphics.PreferredBackBufferHeight);
+            Vector2 position = new Vector2(0, 0);
+            switch (side)
+            {
+                case 1:
+                    position.X = -100;
+                    position.Y = randomY;
+                    break;
+                case 2:
+                    position.X = randomX;
+                    position.Y = -100;
+                    break;
+                case 3:
+                    position.X = _graphics.PreferredBackBufferWidth + 100;
+                    position.Y = randomY;
+                    break;
+                case 4:
+                    position.X = randomX;
+                    position.Y = _graphics.PreferredBackBufferHeight + 100;
+                    break;
+            }
+            return position;
+        }
         private void SpawnWave(int number)
         {
-            for (int i = 0; i < number; i++) { SpawnEnemy(); }
+            for (int i = 0; i < number; i++) {
+                SpawnNormalEnemy(getRandomOutsidePosition()); 
+            }
+            if (levelNumber % 2 == 0) { SpawnBigEnemy(getRandomOutsidePosition()); }
+            if (levelNumber % 5 == 0) { SpawnReallyBigEnemy(getRandomOutsidePosition()); }
         }
         private void UpdateEnemies()
         {
@@ -366,7 +405,10 @@ namespace Pong
                         else theta += (float)Math.PI;
                     }
                 }
-                enemy.angle = theta;
+
+
+                enemy.angle = theta * 25 / enemy.texture.Width;
+
                 float da = enemy.velocity * (float)Math.Cos(theta);
                 float db = enemy.velocity * (float)Math.Sin(theta);
                 
@@ -393,17 +435,17 @@ namespace Pong
                 // Collision Check
                 foreach (Character enemy in enemyList)
                 {
-                    if ((bullet.position.X < enemy.position.X + bullet.velocity + 12) &&
-                        (bullet.position.X > enemy.position.X - bullet.velocity - 12) && 
-                        (bullet.position.Y < enemy.position.Y + bullet.velocity + 12) &&
-                        (bullet.position.Y > enemy.position.Y - bullet.velocity - 12))
+                    if ((bullet.position.X < enemy.position.X + bullet.velocity + enemy.size/2) &&
+                        (bullet.position.X > enemy.position.X - bullet.velocity - enemy.size/2) && 
+                        (bullet.position.Y < enemy.position.Y + bullet.velocity + enemy.size/2) &&
+                        (bullet.position.Y > enemy.position.Y - bullet.velocity - enemy.size/2))
                     {
                         enemy.health -= 1;
                         bullet.health -= 1;
                         if (enemy.health <= 0)
                         {
                             Random rnd = new Random();
-                            if (rnd.Next(25) < 2) { SpawnHeartAtPosition(enemy.position); }
+                            if (rnd.Next(100) < 2) { SpawnHeartAtPosition(enemy.position); }
                         }
                     }
                 }
@@ -446,6 +488,20 @@ namespace Pong
                     float y = bullet.position.Y - dy;
                     bullet.position = new Vector2(x, y);
                 }
+                else
+                {
+                    if (collateralShot.active)
+                    {
+                        foreach (Character enemy in enemyList)
+                        {
+                            float distance = (float)Math.Sqrt(
+                                Math.Pow(bullet.position.X - enemy.position.X, 2) +
+                                Math.Pow(bullet.position.Y - enemy.position.Y, 2)
+                            );
+                            if (distance < 75) { enemy.health--; }
+                        }
+                    }
+                }
             }
             bulletList.RemoveAll(bullet =>
                     (bullet.position.X > _graphics.PreferredBackBufferWidth) ||
@@ -457,15 +513,7 @@ namespace Pong
 
         private void makeLevelStage(int levelNumber)
         {
-            if (levelNumber < 3)
-            {
-                SpawnWave(3);
-            }
-            else if (levelNumber < 6)
-            {
-                SpawnWave(6);
-            }
-            else { SpawnWave(10); }
+            SpawnWave(levelNumber);
         }
         protected override void Initialize()
         {
@@ -486,8 +534,10 @@ namespace Pong
             heartList = new List<Character>();
 
             // TEMP
-            SpawnWave(10);
-            
+            //ActivateSpecificPowerUp(piercingBullets);
+            SpawnWave(5);
+            //SpawnReallyBigEnemy(getRandomOutsidePosition());
+
 
             base.Initialize();
         }
@@ -511,10 +561,10 @@ namespace Pong
                 counter++;
                 currentTime -= countDuration;
                 // Depending on the Time...
-                if (counter % 10 == 0) { makeLevelStage(levelNumber++);}
+                if (counter % 10 == 0) { makeLevelStage(levelNumber++); }
                 if (counter % 25 == 0) { SpawnPowerUpSprite(); }
             }
-
+            
             // Event Readers
             var kstate = Keyboard.GetState();
             if (kstate.IsKeyDown(Keys.A)) player.position.X -= player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -554,7 +604,7 @@ namespace Pong
             if (bulletTimer == 0)
             {
                 SpawnBullet(player.position, player.direction);
-                bulletTimer = (rapidFire.active) ? _bulletCD / 5 : _bulletCD;
+                bulletTimer = (rapidFire.active) ? _bulletCD / 3 : _bulletCD;
             }
             else bulletTimer--;
 
@@ -633,10 +683,10 @@ namespace Pong
                     enemy.texture,
                     enemy.position,
                     null,
-                    Color.Red,
+                    Color.Orange,
                     enemy.angle,
-                    Vector2.Zero,
-                    new Vector2(25f, 25f),
+                    new Vector2(enemy.texture.Width/2, enemy.texture.Height/2),
+                    new Vector2(1f, 1f),
                     SpriteEffects.None,
                     0f);
             }// PowerUps
@@ -662,9 +712,16 @@ namespace Pong
                 Color.DarkRed,
                 0,
                 Vector2.Zero,
-                new Vector2(10f, 10f),
+                new Vector2(1f, 1f),
                 SpriteEffects.None,
                 0f);
+            }
+            int tmp = 0;
+            foreach(PowerUp p in playerPowerUps)
+            {
+                String s = p.name + " - " + (p.duration + p.startTime - counter).ToString();
+                _spriteBatch.DrawString(_font, s,
+                new Vector2(20, 50 + 30*tmp++), Color.White);
             }
 
             // DONT DELETE
