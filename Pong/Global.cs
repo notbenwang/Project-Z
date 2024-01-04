@@ -72,26 +72,29 @@ namespace Zombie2
             int type = enemyType ?? 0;
             var position = p ?? GetRandomOutsidePosition();
             
-            Texture2D texture; float enemy_speed; int health;
+            Texture2D texture; float enemy_speed; int health; int s;
             switch (type)
             {
                 case 1: 
                     texture = bigEnemyTexture;
                     enemy_speed = 1f;
                     health = 5;
+                    s = 50;
                     break;
                 case 2:
                     texture = reallyBigEnemyTexture;
                     enemy_speed = 0.3f;
                     health = 20;
+                    s = 75;
                     break;
                 default:
                     texture = normalEnemyTexture;
                     enemy_speed = 1.7f;
                     health = 1;
+                    s = 25;
                     break;
             }
-            enemySprites.Add(new Character(texture, position, enemy_speed, Direction.Up, health));
+            enemySprites.Add(new Character(texture, position, enemy_speed, Direction.Up, health, size:s));
         }
 
         public void SpawnDropSprite(int? type = null, Vector2? p = null)
@@ -269,6 +272,21 @@ namespace Zombie2
                     float da = enemy.velocity * (float)Math.Cos(theta);
                     float db = enemy.velocity * (float)Math.Sin(theta);
 
+                    foreach (Character otherEnemy in enemySprites)
+                    {
+                        if (enemy != otherEnemy)
+                        {
+                            float[] o = enemy.Overlap(otherEnemy);
+                            if (o[0] != 0 || o[1] != 0)
+                            {
+                                if (enemy.size <= otherEnemy.size) {
+                                    enemy.position.X += o[0];
+                                    enemy.position.Y += o[1];
+                                }
+                            }
+                        }
+                    }
+
                     enemy.position.X += da;
                     enemy.position.Y += db;
 
@@ -278,6 +296,7 @@ namespace Zombie2
                         player.health--;
                     }
                 }
+                
             }
         }
         private void UpdateDrops(int currentTime)

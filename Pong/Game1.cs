@@ -73,20 +73,12 @@ namespace Pong
         }
         private void SpawnWave(int number)
         {
-            for (int i = 0; i <= number/2; i++) {
-                Global.SpawnEnemy(0);
-            }
+            for (int i = 0; i <= number/2; i++) { Global.SpawnEnemy(0); }
             if (levelNumber % 2 == 0) { 
-                for (int i = 1; i <= levelNumber / 6; i++)
-                {
-                    Global.SpawnEnemy(1);
-                }
+                for (int i = 1; i <= number / 6; i++) { Global.SpawnEnemy(1); }
             }
             if (levelNumber % 5 == 0) { 
-                for (int i = 0; i <= levelNumber / 20; i++)
-                {
-                    Global.SpawnEnemy(2);
-                }
+                for (int i = 0; i <= number / 20; i++) { Global.SpawnEnemy(2); }
             }
         }
         protected override void Initialize()
@@ -113,6 +105,8 @@ namespace Pong
 
             _backgroundTexture = Content.Load<Texture2D>("background1");
             _font = Content.Load<SpriteFont>("Arial");
+            //Global.SpawnEnemy(2, new Vector2(400,500));
+            //Global.SpawnEnemy(2, new Vector2(400, 300));
         }
         protected override void Update(GameTime gameTime)
         {

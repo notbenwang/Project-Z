@@ -35,10 +35,10 @@ namespace Zombie2
         //    }
         //}
 
-        public float left() { return position.X - (25 / 2); }
-        public float right() { return position.X + (25 / 2); }
-        public float top() { return position.Y - (25 / 2); }
-        public float bottom() { return position.Y + (25 / 2); }
+        public float left() { return position.X - (size / 2); }
+        public float right() { return position.X + (size / 2); }
+        public float top() { return position.Y - (size / 2); }
+        public float bottom() { return position.Y + (size / 2); }
         public bool Touches(Character other)
         {
             // FROM GAMEBOX
@@ -62,17 +62,6 @@ namespace Zombie2
             else if (m == t) { return new float[] { 0, t }; }
             else { return new float[] { 0, -1 * b }; }
         }
-        public void moveBothToStopOverlap(Character other)
-        {
-            float[] o = Overlap(other);
-            if (o[0] != 0 && o[1] != 0) // o != [0,0]
-            {
-                position.X = o[0] / 2;
-                position.Y = o[1] / 2 + 25;
-                other.position.X = -1 * o[0] / 2 - 25;
-                other.position.Y = -1 * o[1] / 2 - 25;
 
-            }
-        }
     }
 }
