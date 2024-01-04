@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,7 +17,7 @@ namespace Zombie2
         private List<Character> enemySprites;
         private List<Character> bulletSprites;
         private List<Character> dropSprites;
-        private List<PowerUp> playerPowerUps;
+        public List<PowerUp> playerPowerUps;
         public Character player;
 
         private int bulletTimer = 0;
@@ -60,7 +61,7 @@ namespace Zombie2
         public List<Character> Drops() {  return dropSprites; }
         public void UpdateAll(Direction playerMoving, Direction playerShooting, GameTime gameTime, int currentTime)
         {
-            UpdatePlayer(playerMoving, playerShooting, gameTime);
+            UpdatePlayer(playerMoving, playerShooting, gameTime, currentTime);
             UpdateBullets();
             UpdateEnemies();
             UpdateDrops(currentTime);
@@ -96,11 +97,9 @@ namespace Zombie2
         public void SpawnDropSprite(int? type = null, Vector2? p = null)
         {
             var position = p ?? GetRandomInsidePosition();
-            Texture2D texture = type switch
-            {
-                0 => chestTexture,
-                _ => heartTexture,
-            };
+            Texture2D texture;
+            if (type == 0) texture = heartTexture;
+            else texture = chestTexture;
             dropSprites.Add(new Character(texture, position, 0, Direction.Up, 1));
         }
         public void SpawnBulletSprite(Direction direction, Vector2? p = null)
@@ -117,7 +116,7 @@ namespace Zombie2
                 bulletSprites.Add(new Character(bulletTexture, position, bullet_speed, GetLeftDirection(direction), health));
             }
         }  
-        private void UpdatePlayer(Direction moving, Direction shooting, GameTime gameTime)
+        private void UpdatePlayer(Direction moving, Direction shooting, GameTime gameTime, int counter)
         {
             switch (moving)
             {
@@ -134,23 +133,26 @@ namespace Zombie2
                     player.position.Y += player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
                     break;
                 case Direction.UpLeft:
-                    player.position.X -= (float)Math.Sqrt(player.velocity) * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    player.position.Y -= (float)Math.Sqrt(player.velocity) * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    player.position.X -= (float)Math.Sqrt(Math.Pow(player.velocity,2)/2) * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    player.position.Y -= (float)Math.Sqrt(Math.Pow(player.velocity, 2) / 2) * (float)gameTime.ElapsedGameTime.TotalSeconds;
                     break;
                 case Direction.UpRight:
-                    player.position.X += (float)Math.Sqrt(player.velocity) * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    player.position.Y -= (float)Math.Sqrt(player.velocity) * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    player.position.X += (float)Math.Sqrt(Math.Pow(player.velocity, 2) / 2) * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    player.position.Y -= (float)Math.Sqrt(Math.Pow(player.velocity,2)/2) * (float)gameTime.ElapsedGameTime.TotalSeconds;
                     break;
                 case Direction.DownLeft:
-                    player.position.X -= (float)Math.Sqrt(player.velocity) * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    player.position.Y += (float)Math.Sqrt(player.velocity) * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    player.position.X -= (float)Math.Sqrt(Math.Pow(player.velocity, 2) / 2) * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    player.position.Y += (float)Math.Sqrt(Math.Pow(player.velocity,2)/2) * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    break;
+                case Direction.DownRight:
+                    player.position.X += (float)Math.Sqrt(Math.Pow(player.velocity, 2) / 2) * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    player.position.Y += (float)Math.Sqrt(Math.Pow(player.velocity,2)/2) * (float)gameTime.ElapsedGameTime.TotalSeconds;
                     break;
                 default:
-                    player.position.X += (float)Math.Sqrt(player.velocity) * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    player.position.Y += (float)Math.Sqrt(player.velocity) * (float)gameTime.ElapsedGameTime.TotalSeconds;
                     break;
             }
-            player.direction = shooting;
+            if (shooting != Direction.None) { player.direction = shooting; }
+
             if (player.position.X < 15) player.position.X = 15;
             else if (player.position.X > canvasWidth - 15)
             {
@@ -161,6 +163,8 @@ namespace Zombie2
             {
                 player.position.Y = canvasHeight - 15;
             }
+            foreach (var powerUp in playerPowerUps) { powerUp.Update(counter); }
+            playerPowerUps.RemoveAll(p => !p.active);
         }
         private void UpdateBullets()
         {
@@ -192,20 +196,20 @@ namespace Zombie2
                             dy = bullet.velocity;
                             break;
                         case Direction.UpLeft:
-                            dx = -1 * (float)Math.Sqrt(bullet.velocity);
-                            dy = (float)Math.Sqrt(bullet.velocity);
+                            dx = -1 * (float)Math.Sqrt(Math.Pow(bullet.velocity, 2) / 2);
+                            dy = (float)Math.Sqrt(Math.Pow(bullet.velocity, 2) / 2);
                             break;
                         case Direction.UpRight:
-                            dx = (float)Math.Sqrt(bullet.velocity);
-                            dy = (float)Math.Sqrt(bullet.velocity);
+                            dx = (float)Math.Sqrt(Math.Pow(bullet.velocity, 2) / 2);
+                            dy = (float)Math.Sqrt(Math.Pow(bullet.velocity, 2) / 2);
                             break;
                         case Direction.DownRight:
-                            dy = -1 * (float)Math.Sqrt(bullet.velocity);
-                            dx = (float)Math.Sqrt(bullet.velocity);
+                            dy = -1 * (float)Math.Sqrt(Math.Pow(bullet.velocity, 2) / 2);
+                            dx = (float)Math.Sqrt(Math.Pow(bullet.velocity, 2) / 2);
                             break;
                         case Direction.DownLeft:
-                            dy = -1 * (float)Math.Sqrt(bullet.velocity);
-                            dx = -1 * (float)Math.Sqrt(bullet.velocity);
+                            dy = -1 * (float)Math.Sqrt(Math.Pow(bullet.velocity, 2) / 2);
+                            dx = -1 * (float)Math.Sqrt(Math.Pow(bullet.velocity, 2) / 2);
                             break;
                     }
                     float x = bullet.position.X + dx;
@@ -242,18 +246,18 @@ namespace Zombie2
             {
                 foreach (var bullet in bulletSprites)
                 {
-                    if ((bullet.position.X < enemy.position.X + bullet.velocity + enemy.size / 2) &&
-                        (bullet.position.X > enemy.position.X - bullet.velocity - enemy.size / 2) &&
-                        (bullet.position.Y < enemy.position.Y + bullet.velocity + enemy.size / 2) &&
-                        (bullet.position.Y > enemy.position.Y - bullet.velocity - enemy.size / 2))
+                    if ((bullet.position.X < enemy.position.X + bullet.velocity + enemy.texture.Width / 2) &&
+                        (bullet.position.X > enemy.position.X - bullet.velocity - enemy.texture.Width / 2) &&
+                        (bullet.position.Y < enemy.position.Y + bullet.velocity + enemy.texture.Height / 2) &&
+                        (bullet.position.Y > enemy.position.Y - bullet.velocity - enemy.texture.Height / 2))
                     {
-                        enemy.health -= 1;
+                        enemy.health -= (piercingBullets.active) ? 3 : 1;
                         bullet.health -= (enemy.health > 0 && piercingBullets.active) ? 25 : 1;
                         if (enemy.health <= 0) // Drop Rate
                         {
                             Random rnd = new();
-                            if (rnd.Next(100) < 2) { SpawnDropSprite(1, enemy.position); } // Spawn Heart
-                            if (enemy.texture.Width > 50) { SpawnDropSprite(0, enemy.position); } // Spawn Chest
+                            if (rnd.Next(100) < 2) { SpawnDropSprite(0, enemy.position); } // Spawn Heart
+                            if (enemy.texture.Width > 50) { SpawnDropSprite(1, enemy.position); } // Spawn Chest
                         }
                     }
                 }
@@ -289,7 +293,7 @@ namespace Zombie2
             }
             dropSprites.RemoveAll(d => d.health <= 0);
         }
-        private void ActivatePlayerPowerUp(int currentTime, PowerUp? powerUp=null)
+        private void ActivatePlayerPowerUp(int currentTime, PowerUp? powerUp = null)
         {
             PowerUp p = powerUp ?? getRandomPowerUp();
             if (p.active) { p.startTime += p.duration; }

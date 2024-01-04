@@ -15,6 +15,7 @@ namespace Zombie2
         UpLeft,
         UpRight,
         DownLeft,
-        DownRight
+        DownRight,
+        None
     }
 }

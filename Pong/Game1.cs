@@ -25,28 +25,13 @@ namespace Pong
         private SpriteBatch _spriteBatch;
         private SpriteFont _font;
         private Texture2D _backgroundTexture;
-        private int _bulletCD = 35;
 
-        private List<Character> bulletList;
-        private List<Character> enemyList;
-        private List<Character> powerUpTextures;
-        private List<PowerUp> playerPowerUps;
-        private List<Character> heartList;
-
-        private int bulletTimer = 0;
         private float currentTime = 0f;
         private int counter = 0;
         private float countDuration = 1f;
         private int levelNumber = 1;
 
-        private int enemyKills = 0;
-
-        PowerUp rapidFire = new PowerUp(30, "Rapidfire");
-        PowerUp piercingBullets = new PowerUp(30, "Harpoon Bullets");
-        PowerUp tripleShot = new PowerUp(30, "Triple Shot");
-        PowerUp collateralShot = new PowerUp(30, "Exploding Bullets");
-        
-        Character player;
+        Global Global;
 
         private float GetAngleFromDirection(Direction direction) 
         {
@@ -78,81 +63,6 @@ namespace Pong
             }
             return 0f;
         }
-        private Direction GetLeftDirection(Direction direction)
-        {
-            switch (direction)
-            {
-                case Direction.Right:
-                    return Direction.UpRight;
-
-                case Direction.Left:
-                    return Direction.DownLeft;
-
-                case Direction.Down:
-                    return Direction.DownRight;
-
-                case Direction.Up:
-                    return Direction.UpLeft;
-
-                case Direction.UpLeft:
-                    return Direction.Left;
-
-                case Direction.UpRight:
-                    return Direction.Up;
-
-                case Direction.DownLeft:
-                    return Direction.Down;
-
-                case Direction.DownRight:
-                    return Direction.Right;
-            }
-            return Direction.Up;
-        }
-        private Direction GetRightDirection(Direction direction)
-        {
-            switch (direction)
-            {
-                case Direction.Right:
-                    return Direction.DownRight;
-
-                case Direction.Left:
-                    return Direction.UpLeft;
-
-                case Direction.Down:
-                    return Direction.DownLeft;
-
-                case Direction.Up:
-                    return Direction.UpRight;
-
-                case Direction.UpLeft:
-                    return Direction.Up;
-
-                case Direction.UpRight:
-                    return Direction.Right;
-
-                case Direction.DownLeft:
-                    return Direction.Left;
-
-                case Direction.DownRight:
-                    return Direction.Down;
-            }
-            return Direction.Up;
-        }
-        private void SpawnBullet(Vector2 position, Direction direction)
-        {
-            float bullet_speed = 10f;
-            Texture2D whiteRect = new Texture2D(GraphicsDevice, 1, 1);
-            whiteRect.SetData(new[] { Color.White });
-            int health = (piercingBullets.active) ? 25 : 1;
-            Character bullet = new Character(whiteRect, position, bullet_speed, direction, health);
-            bulletList.Add(bullet);
-            
-            if (tripleShot.active)
-            {
-                bulletList.Add(new Character(whiteRect, position, bullet_speed, GetRightDirection(direction), health));
-                bulletList.Add(new Character(whiteRect, position, bullet_speed, GetLeftDirection(direction), health));
-            }
-        }
         private Texture2D CreateRect(int width, int height, Color color)
         {
             Texture2D rect = new Texture2D(GraphicsDevice, width, height);
@@ -161,271 +71,23 @@ namespace Pong
             rect.SetData(data);
             return rect;
         }
-        private void SpawnNormalEnemy(Vector2? p = null)
-        {
-            var position = p ?? GetRandomOutsidePosition();
-            Texture2D rect = CreateRect(25, 25, Color.Red);
-            float enemy_speed = 1.7f;   
-            enemyList.Add(new Character(rect, position, enemy_speed, Direction.Up, 1));
-
-        }
-        private void SpawnBigEnemy(Vector2? p = null)
-        {
-            var position = p ?? GetRandomOutsidePosition();
-            Texture2D orangeRect = CreateRect(50, 50, Color.Orange);
-            float enemy_speed = 1f;
-            enemyList.Add(new Character(orangeRect, position, enemy_speed, Direction.Up, 5, 0, 50));
-        }
-        private void SpawnReallyBigEnemy(Vector2? p = null)
-        {
-            var position = p ?? GetRandomOutsidePosition();
-            Texture2D rect = CreateRect(100, 100, Color.Yellow);
-            float enemy_speed = 0.3f;
-            enemyList.Add(new Character(rect, position, enemy_speed, Direction.Up, 20, 0, 100));
-        }
-        private void SpawnPowerUpSprite(Vector2? p = null)
-        {
-            var position = p ?? GetRandomInsidePosition();
-            Texture2D blueRect = CreateRect(10, 10, Color.LightBlue);
-            powerUpTextures.Add(new Character(blueRect, position, 0, Direction.Up, 1)); 
-        }
-        private void UpdatePowerUpSprites()
-        {
-            foreach (Character p in powerUpTextures) 
-            {
-                if (p.Touches(player))
-                {
-                    ActivateRandomPowerUp();
-                    p.health = 0;
-                }
-            }
-            powerUpTextures.RemoveAll(p => p.health <= 0);
-        }
-        private void ActivateRandomPowerUp()
-        {
-            Random rnd = new Random();
-            int value = rnd.Next(100);
-            
-            if (value < 25) { ActivateSpecificPowerUp(rapidFire); }
-            else if (value < 50) { ActivateSpecificPowerUp(piercingBullets); }
-            else if (value < 75) { ActivateSpecificPowerUp(tripleShot); }
-            else if (value < 100) { ActivateSpecificPowerUp(collateralShot); }
-        }
-        private void SpawnHeartAtPosition(Vector2? p = null)
-        {
-            var position = p ?? GetRandomOutsidePosition(); 
-            Texture2D redRect = CreateRect(10, 10, Color.DarkRed);
-            heartList.Add(new Character(redRect, position, 0, Direction.Up, 1));
-        }
-        private void UpdateHearts()
-        {
-            foreach(var heart in heartList)
-            {
-                if (heart.Touches(player)) { 
-                    heart.health = 0;
-                    player.health++;
-                }
-            }
-            heartList.RemoveAll(h  => h.health <= 0);
-        }
-        private void ActivateSpecificPowerUp(PowerUp p)
-        {
-            if (p.active) { p.startTime += p.duration; }
-            else
-            {
-                p.Initiate(counter);
-                playerPowerUps.Add(p);
-            }
-        }
-        private Vector2 GetRandomOutsidePosition()
-        {
-            Random rnd = new Random();
-            int side = rnd.Next(1, 5);
-            int randomX = rnd.Next(_graphics.PreferredBackBufferWidth);
-            int randomY = rnd.Next(_graphics.PreferredBackBufferHeight);
-            Vector2 position = new Vector2(0, 0);
-            switch (side)
-            {
-                case 1:
-                    position.X = -100;
-                    position.Y = randomY;
-                    break;
-                case 2:
-                    position.X = randomX;
-                    position.Y = -100;
-                    break;
-                case 3:
-                    position.X = _graphics.PreferredBackBufferWidth + 100;
-                    position.Y = randomY;
-                    break;
-                case 4:
-                    position.X = randomX;
-                    position.Y = _graphics.PreferredBackBufferHeight + 100;
-                    break;
-            }
-            return position;
-        }
-        private Vector2 GetRandomInsidePosition()
-        {
-            Random rnd = new Random();
-            int randomX = rnd.Next(_graphics.PreferredBackBufferWidth - 25);
-            int randomY = rnd.Next(_graphics.PreferredBackBufferHeight - 25);
-            return new Vector2(randomX, randomY);
-        }
         private void SpawnWave(int number)
         {
             for (int i = 0; i <= number/2; i++) {
-                SpawnNormalEnemy(); 
+                Global.SpawnEnemy(0);
             }
             if (levelNumber % 2 == 0) { 
                 for (int i = 1; i <= levelNumber / 6; i++)
                 {
-                    SpawnBigEnemy();
+                    Global.SpawnEnemy(1);
                 }
             }
             if (levelNumber % 5 == 0) { 
                 for (int i = 0; i <= levelNumber / 20; i++)
                 {
-                    SpawnReallyBigEnemy();
+                    Global.SpawnEnemy(2);
                 }
             }
-        }
-        private void UpdateEnemies()
-        {
-            enemyList.ForEach(e => { if (e.health <= 0) enemyKills++; });
-            enemyList.RemoveAll(enemy => enemy.health <= 0);
-            foreach (Character enemy in enemyList)
-            {
-                float distY = player.position.Y - enemy.position.Y;
-                float distX = player.position.X - enemy.position.X;
-                float theta;
-                
-                if (distY > -5 && distY < 5)
-                {
-                    if (player.position.X < enemy.position.X) theta = (float)Math.PI * 3;
-                    else theta = (float)Math.PI * 2;
-                }
-
-                else if (distX > -5 && distX < 5)
-                {
-                    if (player.position.Y < enemy.position.Y) theta = (float)Math.PI * 3 / 2;
-                    else theta = (float)(Math.PI * 5 / 2);
-                }
-                else
-                {
-                    theta = (float)(Math.Atan(distY / distX) + (2 * Math.PI));   
-                    if (player.position.X < enemy.position.X)
-                    {
-                        if (player.position.Y < enemy.position.Y) theta -= (float)Math.PI; 
-                        else theta += (float)Math.PI;
-                    }
-                }
-
-
-                enemy.angle = theta * 25 / enemy.texture.Width;
-
-                float da = enemy.velocity * (float)Math.Cos(theta);
-                float db = enemy.velocity * (float)Math.Sin(theta);
-                
-                enemy.position.X += da;
-                enemy.position.Y += db;
-                foreach (Character otherEnemy in enemyList)
-                {
-                    if (otherEnemy != enemy && otherEnemy.Touches(enemy)) 
-                    {
-                        enemy.moveBothToStopOverlap(otherEnemy); 
-                    } 
-                }
-                if (enemy.Touches(player))
-                {
-                    enemy.health = 0;
-                    player.health--;
-                }
-            }
-        }
-        private void UpdateBullets()
-        {
-            foreach (Character bullet in bulletList)
-            {
-                // Collision Check
-                foreach (Character enemy in enemyList)
-                {
-                    if ((bullet.position.X < enemy.position.X + bullet.velocity + enemy.size/2) &&
-                        (bullet.position.X > enemy.position.X - bullet.velocity - enemy.size/2) && 
-                        (bullet.position.Y < enemy.position.Y + bullet.velocity + enemy.size/2) &&
-                        (bullet.position.Y > enemy.position.Y - bullet.velocity - enemy.size/2))
-                    {
-                        enemy.health -= 1;
-                        bullet.health -= (enemy.health > 0 && piercingBullets.active) ? 25 : 1;
-                        //bullet.health -= 1;
-                        if (enemy.health <= 0)
-                        {
-                            Random rnd = new Random();
-                            if (rnd.Next(100) < 2) { SpawnHeartAtPosition(enemy.position); }
-                            if (enemy.texture.Width > 50) { SpawnPowerUpSprite(enemy.position); }
-                        }
-                    }
-                }
-                // Movement Check
-                if (bullet.health > 0)
-                {
-                    float dx = 0, dy = 0;
-                    switch (bullet.direction)
-                    {
-                        case Direction.Right:
-                            dx = bullet.velocity;
-                            break;
-                        case Direction.Left:
-                            dx = -1 * bullet.velocity;
-                            break;
-                        case Direction.Down:
-                            dy = -1 * bullet.velocity;
-                            break;
-                        case Direction.Up:
-                            dy = bullet.velocity;
-                            break;
-                        case Direction.UpLeft:
-                            dx = -1 * bullet.velocity;
-                            dy = bullet.velocity;
-                            break;
-                        case Direction.UpRight:
-                            dx = bullet.velocity;
-                            dy = bullet.velocity;
-                            break;
-                        case Direction.DownRight:
-                            dy = -1 * bullet.velocity;
-                            dx = bullet.velocity;
-                            break;
-                        case Direction.DownLeft:
-                            dy = -1 * bullet.velocity;
-                            dx = -1 * bullet.velocity;
-                            break;
-                    }
-                    float x = bullet.position.X + dx;
-                    float y = bullet.position.Y - dy;
-                    bullet.position = new Vector2(x, y);
-                }
-                else
-                {
-                    if (collateralShot.active)
-                    {
-                        foreach (Character enemy in enemyList)
-                        {
-                            float distance = (float)Math.Sqrt(
-                                Math.Pow(bullet.position.X - enemy.position.X, 2) +
-                                Math.Pow(bullet.position.Y - enemy.position.Y, 2)
-                            );
-                            if (distance < 75) { enemy.health--; }
-                        }
-                    }
-                }
-            }
-            bulletList.RemoveAll(bullet =>
-                    (bullet.position.X > _graphics.PreferredBackBufferWidth) ||
-                    (bullet.position.X < 0) ||
-                    (bullet.position.Y > _graphics.PreferredBackBufferHeight) ||
-                    (bullet.position.Y < 0));
-            bulletList.RemoveAll(bullet => bullet.health <= 0);
         }
         protected override void Initialize()
         {
@@ -433,28 +95,22 @@ namespace Pong
             _graphics.PreferredBackBufferHeight = 720;
             _graphics.ApplyChanges();
 
-            // Init player
-            Vector2 position = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
-            float speed = 200f;
-            player = new Character(null, position, speed, Direction.Left, 5);
-
-            // Init Character Lists
-            bulletList = new List<Character>();
-            enemyList = new List<Character>();
-            playerPowerUps = new List<PowerUp>();
-            powerUpTextures = new List<Character>();
-            heartList = new List<Character>();
-
+            Global = new Global(_graphics);
             // TEMP
-            SpawnWave(2);
-
             base.Initialize();
         }
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             // Load Textures
-            player.texture = Content.Load<Texture2D>("player");
+            Global.player.texture = Content.Load<Texture2D>("player");
+            Global.bigEnemyTexture = CreateRect(50, 50, Color.Orange);
+            Global.reallyBigEnemyTexture = CreateRect(75, 75, Color.Yellow);
+            Global.normalEnemyTexture = CreateRect(25, 25, Color.Red);
+            Global.chestTexture = CreateRect(10, 10, Color.Blue);
+            Global.heartTexture = CreateRect(10, 10, Color.DarkRed);
+            Global.bulletTexture = CreateRect(5, 5, Color.White);
+
             _backgroundTexture = Content.Load<Texture2D>("background1");
             _font = Content.Load<SpriteFont>("Arial");
         }
@@ -467,63 +123,51 @@ namespace Pong
             currentTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (currentTime >= countDuration)
             {
-                counter++;
                 currentTime -= countDuration;
                 // Depending on the Time...
                 if (counter % 10 == 0) { SpawnWave(levelNumber++); }
-                //if (counter % 25 == 0) { SpawnPowerUpSprite(); }
+                if (counter % 50 == 0) { Global.SpawnDropSprite(1); }
+                counter++;
             }
             
             // Event Readers
             var kstate = Keyboard.GetState();
-            if (kstate.IsKeyDown(Keys.A)) player.position.X -= player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (kstate.IsKeyDown(Keys.D)) player.position.X += player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (kstate.IsKeyDown(Keys.W)) player.position.Y -= player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (kstate.IsKeyDown(Keys.S)) player.position.Y += player.velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (kstate.IsKeyDown(Keys.Left)) player.direction = Direction.Left;
-            if (kstate.IsKeyDown(Keys.Right)) player.direction = Direction.Right;
+            Direction moving = Direction.None; 
+            Direction shooting = Direction.None;
+            if (kstate.IsKeyDown(Keys.A)) moving = Direction.Left;
+            if (kstate.IsKeyDown(Keys.D)) moving = Direction.Right;
+            if (kstate.IsKeyDown(Keys.W))
+            {
+                if (kstate.IsKeyDown(Keys.A)) moving = Direction.UpLeft;
+                else
+                if (kstate.IsKeyDown(Keys.D)) moving = Direction.UpRight;
+                else moving = Direction.Up;
+            }
+            if (kstate.IsKeyDown(Keys.S))
+            {
+                if (kstate.IsKeyDown(Keys.A)) moving = Direction.DownLeft;
+                else
+                if (kstate.IsKeyDown(Keys.D)) moving = Direction.DownRight;
+                else moving = Direction.Down;
+            }
+            if (kstate.IsKeyDown(Keys.Left)) shooting = Direction.Left;
+            if (kstate.IsKeyDown(Keys.Right)) shooting = Direction.Right;
             if (kstate.IsKeyDown(Keys.Up))
             {
-                if (kstate.IsKeyDown(Keys.Left)) player.direction = Direction.UpLeft;
+                if (kstate.IsKeyDown(Keys.Left)) shooting = Direction.UpLeft;
                 else 
-                if (kstate.IsKeyDown(Keys.Right)) player.direction = Direction.UpRight;
-                else player.direction = Direction.Up;
+                if (kstate.IsKeyDown(Keys.Right)) shooting = Direction.UpRight;
+                else shooting = Direction.Up;
             }
             if (kstate.IsKeyDown(Keys.Down))
             {
-                if (kstate.IsKeyDown(Keys.Left)) player.direction = Direction.DownLeft;
+                if (kstate.IsKeyDown(Keys.Left)) shooting  = Direction.DownLeft;
                 else 
-                if (kstate.IsKeyDown(Keys.Right)) player.direction = Direction.DownRight;
-                else player.direction = Direction.Down;
+                if (kstate.IsKeyDown(Keys.Right)) shooting = Direction.DownRight;
+                else shooting = Direction.Down;
             }
 
-            // Player Bound Managing
-            if (player.position.X < 15) player.position.X = 15;
-            else if (player.position.X > _graphics.PreferredBackBufferWidth - 15)
-            {
-                player.position.X = _graphics.PreferredBackBufferWidth - 15;
-            }
-            if (player.position.Y < 15) player.position.Y = 15;
-            else if (player.position.Y > _graphics.PreferredBackBufferHeight -15)
-            {
-                player.position.Y = _graphics.PreferredBackBufferHeight - 15;
-            }
-
-            // Bullet Time Management
-            if (bulletTimer == 0)
-            {
-                SpawnBullet(player.position, player.direction);
-                bulletTimer = (rapidFire.active) ? _bulletCD / 3 : _bulletCD;
-            }
-            else bulletTimer--;
-
-            // Updaters
-            UpdateBullets();
-            UpdateEnemies();
-            UpdatePowerUpSprites();
-            foreach (var powerUp in playerPowerUps) { powerUp.Update(counter);}
-            playerPowerUps.RemoveAll(p => !p.active);
-            UpdateHearts();
+            Global.UpdateAll(moving, shooting, gameTime, counter);
             // DON'T DELETE
             base.Update(gameTime);
         }
@@ -540,7 +184,7 @@ namespace Pong
                 null,
                 Color.White,
                 0,
-                new Vector2(player.texture.Width / 2, player.texture.Height / 2),
+                new Vector2(Global.player.texture.Width / 2, Global.player.texture.Height / 2),
                 new Vector2(0.35f, 0.35f),
                 SpriteEffects.None,
                 0f
@@ -551,27 +195,27 @@ namespace Pong
                 new Vector2(_graphics.PreferredBackBufferWidth / 2 - _font.MeasureString(counter.ToString()).Length() / 2, 10), Color.White);
             
             // Enemy Kill Count
-            _spriteBatch.DrawString(_font, enemyKills.ToString(),
+            _spriteBatch.DrawString(_font, Global.enemyKills.ToString(),
                 new Vector2(20, 10), Color.White);
             
             // Health Count
-            _spriteBatch.DrawString(_font, player.health.ToString(),
+            _spriteBatch.DrawString(_font, Global.player.health.ToString(),
                 new Vector2(_graphics.PreferredBackBufferWidth - 40 , 10), Color.DarkRed);
             
             // Player Sprite
             _spriteBatch.Draw(
-                player.texture, 
-                player.position, 
+                Global.player.texture, 
+                Global.player.position, 
                 null, 
                 Color.White, 
-                GetAngleFromDirection(player.direction), 
-                new Vector2(player.texture.Width / 2, player.texture.Height / 2), 
+                GetAngleFromDirection(Global.player.direction), 
+                new Vector2(Global.player.texture.Width / 2, Global.player.texture.Height / 2), 
                 new Vector2(0.15f, 0.15f),
                 SpriteEffects.None, 
                 0f);
             
             // Bullets
-            foreach(Character bullet in bulletList)
+            foreach(Character bullet in Global.Bullets())
             {
                 _spriteBatch.Draw(
                     bullet.texture,
@@ -580,13 +224,13 @@ namespace Pong
                     Color.White,
                     0f,
                     Vector2.Zero,
-                    new Vector2(5f, 5f),
+                    new Vector2(1f, 1f),
                     SpriteEffects.None,
                     0f);
             }
             
             // Enemies
-            foreach(Character enemy in enemyList)
+            foreach(Character enemy in Global.Enemies())
             {
                 // Enemy Texture
                 _spriteBatch.Draw(
@@ -609,36 +253,22 @@ namespace Pong
                     SpriteEffects.None,
                     0f);
             }// PowerUps
-            foreach(Character powerUp in powerUpTextures)
+            foreach(Character powerUp in Global.Drops())
             {
                 _spriteBatch.Draw(
                 powerUp.texture,
                 powerUp.position,
                 null,
-                Color.Blue,
+                Color.White,
                 0,
                 Vector2.Zero,
                 new Vector2(1f, 1f),
                 SpriteEffects.None,
                 0f);   
             }
-            // Hearts
-            foreach(Character heart in heartList)
-            {
-                _spriteBatch.Draw(
-                heart.texture,
-                heart.position,
-                null,
-                Color.DarkRed,
-                0,
-                Vector2.Zero,
-                new Vector2(1f, 1f),
-                SpriteEffects.None,
-                0f);
-            }
-            // Player Buffs Text + counter
+
             int tmp = 0;
-            foreach(PowerUp p in playerPowerUps)
+            foreach(PowerUp p in Global.playerPowerUps)
             {
                 String s = p.name + " - " + (p.duration + p.startTime - counter).ToString();
                 _spriteBatch.DrawString(_font, s,
