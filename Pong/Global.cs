@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Reflection;
@@ -35,8 +36,10 @@ namespace Zombie2
         public Texture2D normalEnemyTexture;
         public Texture2D bigEnemyTexture;
         public Texture2D reallyBigEnemyTexture;
+        public Texture2D cartTexture;
         public Texture2D chestTexture;
         public Texture2D heartTexture;
+        
 
         public Global(GraphicsDeviceManager _graphics)
         {
@@ -73,6 +76,7 @@ namespace Zombie2
             var position = p ?? GetRandomOutsidePosition();
             
             Texture2D texture; float enemy_speed; int health; int s;
+            Direction direction = Direction.None;
             switch (type)
             {
                 case 1: 
@@ -87,6 +91,19 @@ namespace Zombie2
                     health = 20;
                     s = 75;
                     break;
+                case 3:
+                    texture = cartTexture;
+                    enemy_speed = 0.1f;
+                    health = 75;
+                    s = 125;
+                    Random rnd = new Random();
+                    int n = rnd.Next(1, 4);
+                    if (n == 1) direction = Direction.Up;
+                    else if (n==2) direction = Direction.Down;
+                    else if (n==3) direction = Direction.Left;
+                    else direction = Direction.Right;
+                    position = GetRandomPositionFromDirection(direction);
+                    break;
                 default:
                     texture = normalEnemyTexture;
                     enemy_speed = 1.7f;
@@ -94,7 +111,7 @@ namespace Zombie2
                     s = 25;
                     break;
             }
-            enemySprites.Add(new Character(texture, position, enemy_speed, Direction.Up, health, size:s));
+            enemySprites.Add(new Character(texture, position, enemy_speed, direction, health, size:s));
         }
 
         public void SpawnDropSprite(int? type = null, Vector2? p = null)
@@ -266,8 +283,16 @@ namespace Zombie2
                 }
                 if (enemy.health > 0)
                 {
-                    float theta = GetAngleFromEnemyToPlayer(enemy.position, player.position);
-                    enemy.angle = theta * 25 / enemy.texture.Width; // Hard coded to slow down big boy turning
+                    float theta;
+                    if (enemy.texture == cartTexture)
+                    {
+                        theta = GetAngleFromDirection(enemy.direction);
+                    }
+                    else
+                    {
+                        theta = GetAngleFromEnemyToPlayer(enemy.position, player.position);
+                        enemy.angle = theta * 25 / enemy.texture.Width; // Hard coded to slow down big boy turning
+                    }
 
                     float da = enemy.velocity * (float)Math.Cos(theta);
                     float db = enemy.velocity * (float)Math.Sin(theta);
@@ -296,8 +321,8 @@ namespace Zombie2
                         player.health--;
                     }
                 }
-                
             }
+            enemySprites.RemoveAll(e => e.direction != Direction.None && isCartOutOfBounds(e.position, e.direction));
         }
         private void UpdateDrops(int currentTime)
         {
@@ -454,6 +479,80 @@ namespace Zombie2
             int randomY = rnd.Next(canvasHeight - 25);
             return new Vector2(randomX, randomY);
         }
-        
+        private float GetAngleFromDirection(Direction direction)
+        {
+            switch (direction)
+            {
+                case Direction.Right:
+                    return 0f;
+
+                case Direction.Left:
+                    return (float)Math.PI;
+
+                case Direction.Down:
+                    return (float)Math.PI / 2;
+
+                case Direction.Up:
+                    return (float)Math.PI * 3 / 2;
+
+                case Direction.UpLeft:
+                    return (float)Math.PI * 5 / 4;
+
+                case Direction.UpRight:
+                    return (float)Math.PI * 7 / 4;
+
+                case Direction.DownLeft:
+                    return (float)Math.PI * 3 / 4;
+
+                case Direction.DownRight:
+                    return (float)Math.PI / 4;
+            }
+            return 0f;
+        }
+        private Vector2 GetRandomPositionFromDirection(Direction direction)
+        {
+            Random random = new Random();
+            int randomNumber;
+            switch (direction)
+            {
+                case Direction.Right:
+                    randomNumber = random.Next(200, canvasWidth - 200);
+                    return new Vector2(-150, randomNumber);
+
+                case Direction.Left:
+                    randomNumber = random.Next(200, canvasWidth - 200);
+                    return new Vector2(canvasWidth+150, randomNumber);
+
+                case Direction.Down:
+                    randomNumber = random.Next(200, canvasHeight - 200);
+                    return new Vector2(randomNumber, -150);
+
+                case Direction.Up:
+                    randomNumber = random.Next(200, canvasHeight - 200);
+                    return new Vector2(randomNumber, canvasHeight + 150);
+                default:
+                    return new Vector2(0, 0);
+            }
+        }
+        private bool isCartOutOfBounds(Vector2 position, Direction direction)
+        {
+            switch (direction)
+            {
+                case Direction.Right:
+                    return position.X > canvasWidth + cartTexture.Width;
+
+                case Direction.Left:
+                    return position.X < -cartTexture.Width;
+
+                case Direction.Down:
+                    return position.Y > canvasHeight + cartTexture.Height;
+
+                case Direction.Up:
+                    return position.Y < -cartTexture.Height;
+                default:
+                    return false;
+            }
+        }
+
     }
 }

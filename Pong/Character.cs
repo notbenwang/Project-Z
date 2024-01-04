@@ -27,14 +27,6 @@ namespace Zombie2
             this.angle = angle;
             this.size = size;
         }
-        //public float SetAngle(float angle)
-        //{
-        //    if (Math.Abs(angle - this.angle) > 0)
-        //    {
-
-        //    }
-        //}
-
         public float left() { return position.X - (size / 2); }
         public float right() { return position.X + (size / 2); }
         public float top() { return position.Y - (size / 2); }
@@ -62,6 +54,5 @@ namespace Zombie2
             else if (m == t) { return new float[] { 0, t }; }
             else { return new float[] { 0, -1 * b }; }
         }
-
     }
 }

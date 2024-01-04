@@ -88,7 +88,6 @@ namespace Pong
             _graphics.ApplyChanges();
 
             Global = new Global(_graphics);
-            // TEMP
             base.Initialize();
         }
         protected override void LoadContent()
@@ -102,11 +101,16 @@ namespace Pong
             Global.chestTexture = CreateRect(10, 10, Color.Blue);
             Global.heartTexture = CreateRect(10, 10, Color.DarkRed);
             Global.bulletTexture = CreateRect(5, 5, Color.White);
+            Global.cartTexture = CreateRect(125, 125, Color.Cyan);
 
             _backgroundTexture = Content.Load<Texture2D>("background1");
             _font = Content.Load<SpriteFont>("Arial");
+
+            // Spawn at beginning
             //Global.SpawnEnemy(2, new Vector2(400,500));
             //Global.SpawnEnemy(2, new Vector2(400, 300));
+            //Global.SpawnEnemy(3, new Vector2(400, 0));
+            Global.SpawnEnemy(3);
         }
         protected override void Update(GameTime gameTime)
         {
@@ -123,7 +127,7 @@ namespace Pong
                 if (counter % 50 == 0) { Global.SpawnDropSprite(1); }
                 counter++;
             }
-            
+            Debug.WriteLine(Global.Enemies().Count);
             // Event Readers
             var kstate = Keyboard.GetState();
             Direction moving = Direction.None; 
@@ -231,7 +235,7 @@ namespace Pong
                     enemy.texture,
                     enemy.position,
                     null,
-                    Color.Orange,
+                    Color.White,
                     enemy.angle,
                     new Vector2(enemy.texture.Width/2, enemy.texture.Height/2),
                     new Vector2(1f, 1f),
