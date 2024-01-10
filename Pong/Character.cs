@@ -50,9 +50,9 @@ namespace Zombie2
             float m = Math.Max(Math.Max(l, r), Math.Max(t, b));
             if (m >= 0) { return new float[] { 0, 0 }; }
             else if (m == l) { return new float[] { l, 0 }; }
-            else if (m == r) { return new float[] { -1 * r, 0 }; }
+            else if (m == r) { return new float[] { -r, 0 }; }
             else if (m == t) { return new float[] { 0, t }; }
-            else { return new float[] { 0, -1 * b }; }
+            else { return new float[] { 0, -b }; }
         }
     }
 }

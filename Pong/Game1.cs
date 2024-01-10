@@ -25,6 +25,7 @@ namespace Pong
         private SpriteBatch _spriteBatch;
         private SpriteFont _font;
         private Texture2D _backgroundTexture;
+        private Texture2D _backgroundTextureDeath;
 
         private float currentTime = 0f;
         private int counter = 0;
@@ -80,6 +81,10 @@ namespace Pong
             if (levelNumber % 5 == 0) { 
                 for (int i = 0; i <= number / 20; i++) { Global.SpawnEnemy(2); }
             }
+            if (levelNumber % 10 == 0)
+            {
+                Global.SpawnEnemy(3);
+            }
         }
         protected override void Initialize()
         {
@@ -104,68 +109,78 @@ namespace Pong
             Global.cartTexture = CreateRect(125, 125, Color.Cyan);
 
             _backgroundTexture = Content.Load<Texture2D>("background1");
+            _backgroundTextureDeath = Content.Load<Texture2D>("background0");
             _font = Content.Load<SpriteFont>("Arial");
 
             // Spawn at beginning
-            //Global.SpawnEnemy(2, new Vector2(400,500));
-            //Global.SpawnEnemy(2, new Vector2(400, 300));
+            Global.SpawnEnemy(2, new Vector2(400, 500));
+            Global.SpawnEnemy(2, new Vector2(400, 300));
+            Global.SpawnEnemy(2, new Vector2(400, 500));
+            Global.SpawnEnemy(2, new Vector2(400, 300));
+            Global.ActivatePlayerPowerUp(counter, Global.collateralShot);
             //Global.SpawnEnemy(3, new Vector2(400, 0));
-            Global.SpawnEnemy(3);
         }
         protected override void Update(GameTime gameTime)
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
+            if (Global.player.health <= 0)
+            {
+                _backgroundTexture = _backgroundTextureDeath;
+            }
+            else
+            {
+                // Update Timer
+                currentTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (currentTime >= countDuration)
+                {
+                    currentTime -= countDuration;
+                    // Depending on the Time...
+                    if (counter % 10 == 0) { SpawnWave(levelNumber++); }
+                    if (counter % 50 == 0) { Global.SpawnDropSprite(1); }
+                    counter++;
+                }
+            
+                // Event Readers
+                var kstate = Keyboard.GetState();
+                Direction moving = Direction.None; 
+                Direction shooting = Direction.None;
+                if (kstate.IsKeyDown(Keys.A)) moving = Direction.Left;
+                if (kstate.IsKeyDown(Keys.D)) moving = Direction.Right;
+                if (kstate.IsKeyDown(Keys.W))
+                {
+                    if (kstate.IsKeyDown(Keys.A)) moving = Direction.UpLeft;
+                    else
+                    if (kstate.IsKeyDown(Keys.D)) moving = Direction.UpRight;
+                    else moving = Direction.Up;
+                }
+                if (kstate.IsKeyDown(Keys.S))
+                {
+                    if (kstate.IsKeyDown(Keys.A)) moving = Direction.DownLeft;
+                    else
+                    if (kstate.IsKeyDown(Keys.D)) moving = Direction.DownRight;
+                    else moving = Direction.Down;
+                }
+                if (kstate.IsKeyDown(Keys.Left)) shooting = Direction.Left;
+                if (kstate.IsKeyDown(Keys.Right)) shooting = Direction.Right;
+                if (kstate.IsKeyDown(Keys.Up))
+                {
+                    if (kstate.IsKeyDown(Keys.Left)) shooting = Direction.UpLeft;
+                    else 
+                    if (kstate.IsKeyDown(Keys.Right)) shooting = Direction.UpRight;
+                    else shooting = Direction.Up;
+                }
+                if (kstate.IsKeyDown(Keys.Down))
+                {
+                    if (kstate.IsKeyDown(Keys.Left)) shooting  = Direction.DownLeft;
+                    else 
+                    if (kstate.IsKeyDown(Keys.Right)) shooting = Direction.DownRight;
+                    else shooting = Direction.Down;
+                }
 
-            // Update Timer
-            currentTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (currentTime >= countDuration)
-            {
-                currentTime -= countDuration;
-                // Depending on the Time...
-                if (counter % 10 == 0) { SpawnWave(levelNumber++); }
-                if (counter % 50 == 0) { Global.SpawnDropSprite(1); }
-                counter++;
+                Global.UpdateAll(moving, shooting, gameTime, counter);
             }
-            Debug.WriteLine(Global.Enemies().Count);
-            // Event Readers
-            var kstate = Keyboard.GetState();
-            Direction moving = Direction.None; 
-            Direction shooting = Direction.None;
-            if (kstate.IsKeyDown(Keys.A)) moving = Direction.Left;
-            if (kstate.IsKeyDown(Keys.D)) moving = Direction.Right;
-            if (kstate.IsKeyDown(Keys.W))
-            {
-                if (kstate.IsKeyDown(Keys.A)) moving = Direction.UpLeft;
-                else
-                if (kstate.IsKeyDown(Keys.D)) moving = Direction.UpRight;
-                else moving = Direction.Up;
-            }
-            if (kstate.IsKeyDown(Keys.S))
-            {
-                if (kstate.IsKeyDown(Keys.A)) moving = Direction.DownLeft;
-                else
-                if (kstate.IsKeyDown(Keys.D)) moving = Direction.DownRight;
-                else moving = Direction.Down;
-            }
-            if (kstate.IsKeyDown(Keys.Left)) shooting = Direction.Left;
-            if (kstate.IsKeyDown(Keys.Right)) shooting = Direction.Right;
-            if (kstate.IsKeyDown(Keys.Up))
-            {
-                if (kstate.IsKeyDown(Keys.Left)) shooting = Direction.UpLeft;
-                else 
-                if (kstate.IsKeyDown(Keys.Right)) shooting = Direction.UpRight;
-                else shooting = Direction.Up;
-            }
-            if (kstate.IsKeyDown(Keys.Down))
-            {
-                if (kstate.IsKeyDown(Keys.Left)) shooting  = Direction.DownLeft;
-                else 
-                if (kstate.IsKeyDown(Keys.Right)) shooting = Direction.DownRight;
-                else shooting = Direction.Down;
-            }
-
-            Global.UpdateAll(moving, shooting, gameTime, counter);
+            
             // DON'T DELETE
             base.Update(gameTime);
         }
@@ -188,18 +203,21 @@ namespace Pong
                 0f
                 );
 
-            // Timer
-            _spriteBatch.DrawString(_font, counter.ToString(), 
-                new Vector2(_graphics.PreferredBackBufferWidth / 2 - _font.MeasureString(counter.ToString()).Length() / 2, 10), Color.White);
-            
-            // Enemy Kill Count
-            _spriteBatch.DrawString(_font, Global.enemyKills.ToString(),
-                new Vector2(20, 10), Color.White);
-            
-            // Health Count
-            _spriteBatch.DrawString(_font, Global.player.health.ToString(),
-                new Vector2(_graphics.PreferredBackBufferWidth - 40 , 10), Color.DarkRed);
-            
+            // PowerUps
+            foreach (Character powerUp in Global.Drops())
+            {
+                _spriteBatch.Draw(
+                powerUp.texture,
+                powerUp.position,
+                null,
+                Color.White,
+                0,
+                Vector2.Zero,
+                new Vector2(1f, 1f),
+                SpriteEffects.None,
+                0f);
+            }
+
             // Player Sprite
             _spriteBatch.Draw(
                 Global.player.texture, 
@@ -250,19 +268,6 @@ namespace Pong
                     new Vector2(1f, 1f),
                     SpriteEffects.None,
                     0f);
-            }// PowerUps
-            foreach(Character powerUp in Global.Drops())
-            {
-                _spriteBatch.Draw(
-                powerUp.texture,
-                powerUp.position,
-                null,
-                Color.White,
-                0,
-                Vector2.Zero,
-                new Vector2(1f, 1f),
-                SpriteEffects.None,
-                0f);   
             }
 
             int tmp = 0;
@@ -277,6 +282,32 @@ namespace Pong
                 SpriteEffects.None,
                 0f);
             }
+
+            // Timer
+            _spriteBatch.DrawString(_font, counter.ToString(),
+                new Vector2(_graphics.PreferredBackBufferWidth / 2 - _font.MeasureString(counter.ToString()).Length() / 2, 10), Color.White);
+
+            // Enemy Kill Count
+            if (Global.player.health <= 0)
+            {
+                _spriteBatch.DrawString(_font, "Score: " + counter,
+                new Vector2(_graphics.PreferredBackBufferWidth / 2 - 50 - _font.MeasureString("Time Survived: " + counter.ToString()).Length() / 2, _graphics.PreferredBackBufferHeight / 2), Color.Red,
+                0f,
+                Vector2.Zero,
+                new Vector2(2f, 2f),
+                SpriteEffects.None,
+                0f);
+            }
+            else
+            {
+                _spriteBatch.DrawString(_font, Global.enemyKills.ToString(),
+                new Vector2(20, 10), Color.White);
+            }
+
+
+            // Health Count
+            _spriteBatch.DrawString(_font, Global.player.health.ToString(),
+                new Vector2(_graphics.PreferredBackBufferWidth - 40, 10), Color.DarkRed);
 
             // DONT DELETE
             _spriteBatch.End();

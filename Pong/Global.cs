@@ -260,8 +260,7 @@ namespace Zombie2
         }
         private void UpdateEnemies()
         {
-            enemySprites.ForEach(e => { if (e.health <= 0) enemyKills++; });
-            enemySprites.RemoveAll(enemy => enemy.health <= 0);
+            
             foreach (Character enemy in enemySprites)
             {
                 foreach (var bullet in bulletSprites)
@@ -275,9 +274,7 @@ namespace Zombie2
                         bullet.health -= (enemy.health > 0 && piercingBullets.active) ? 25 : 1;
                         if (enemy.health <= 0) // Drop Rate
                         {
-                            Random rnd = new();
-                            if (rnd.Next(100) < 2) { SpawnDropSprite(0, enemy.position); } // Spawn Heart
-                            if (enemy.texture.Width > 50) { SpawnDropSprite(1, enemy.position); } // Spawn Chest
+                            
                         }
                     }
                 }
@@ -322,6 +319,24 @@ namespace Zombie2
                     }
                 }
             }
+            enemySprites.ForEach(e =>
+            {
+                if (e.health <= 0)
+                {
+                    enemyKills++;
+                    Random rnd = new();
+                    if (rnd.Next(100) < 2) { SpawnDropSprite(0, e.position); } // Spawn Heart
+                    if (e.texture == reallyBigEnemyTexture) { SpawnDropSprite(1, e.position); } // Spawn Chest
+                    else if (e.texture == cartTexture)
+                    {
+                        SpawnDropSprite(1, e.position);
+                        SpawnDropSprite(1, e.position);
+                        SpawnDropSprite(1, e.position);
+                    }
+                }
+            });
+
+            enemySprites.RemoveAll(enemy => enemy.health <= 0);
             enemySprites.RemoveAll(e => e.direction != Direction.None && isCartOutOfBounds(e.position, e.direction));
         }
         private void UpdateDrops(int currentTime)
@@ -337,7 +352,7 @@ namespace Zombie2
             }
             dropSprites.RemoveAll(d => d.health <= 0);
         }
-        private void ActivatePlayerPowerUp(int currentTime, PowerUp? powerUp = null)
+        public void ActivatePlayerPowerUp(int currentTime, PowerUp? powerUp = null)
         {
             PowerUp p = powerUp ?? getRandomPowerUp();
             if (p.active) { p.startTime += p.duration; }
