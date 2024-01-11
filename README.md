@@ -4,4 +4,4 @@ Goal: Total remake of a topdown zombie-based shooter game I made back in my intr
 
 If you want to see that original project, you can find it here: https://github.com/notbenwang/CS1110-Final-Project/
 
-Remake is still heavily WIP but progress is looking good!
+A complete, polished remake is still heavily WIP, along with this README.
